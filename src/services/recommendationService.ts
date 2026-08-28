@@ -30,8 +30,8 @@ export const recommendationService = {
       { key: "watering", text: "How often can you water?", options: ["Every day", "Every 2-3 days", "1-2 times a week", "Very rarely"] },
     ] as const;
   },
-  recommend(answers: AIPlantFinderAnswers): PlantRecommendation[] {
-    return products
+  recommend(answers: AIPlantFinderAnswers, sourceProducts: Product[] = products): PlantRecommendation[] {
+    return sourceProducts
       .filter((product) => !["Pots & Planters", "Fertilizers", "Gardening Tools"].includes(product.category))
       .map((product) => scoreProduct(product, answers))
       .sort((a, b) => b.score - a.score)

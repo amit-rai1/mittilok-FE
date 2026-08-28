@@ -20,13 +20,16 @@ import {
   User,
   X,
 } from "lucide-react";
-import { lazy, Suspense, useMemo, useState } from "react";
-import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
-import { blogPosts, categories, myPlants, orders, products, reviews } from "./data/catalog";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { blogPosts, myPlants, orders, reviews } from "./data/catalog";
 import { recommendationService } from "./services/recommendationService";
 import type { AIPlantFinderAnswers, PlantRecommendation, Product } from "./types";
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
+import { useAuth } from "./context/AuthContext";
+import { useCatalog } from "./context/CatalogContext";
+import { catalogApi, type ApiCategory, type ApiProduct, type ApiService } from "./services/api";
 
 const AdminDashboard = lazy(() => Promise.resolve({ default: Admin }));
 
@@ -45,15 +48,15 @@ function App() {
             <Route path="/shop/:categorySlug" element={<ShopPage />} />
             <Route path="/product/:slug" element={<ProductPage />} />
             <Route path="/ai-plant-finder" element={<PlantFinderPage />} />
-            <Route path="/my-plants" element={<MyPlantsPage />} />
-            <Route path="/my-plants/:id" element={<PlantProfilePage />} />
-            <Route path="/care" element={<CarePage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/my-plants" element={<ProtectedRoute><MyPlantsPage /></ProtectedRoute>} />
+            <Route path="/my-plants/:id" element={<ProtectedRoute><PlantProfilePage /></ProtectedRoute>} />
+            <Route path="/care" element={<ProtectedRoute><CarePage /></ProtectedRoute>} />
+            <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/orders/:id" element={<OrderTrackingPage />} />
-            <Route path="/account" element={<AccountPage />} />
+            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:slug" element={<BlogArticlePage />} />
             <Route path="/about" element={<AboutPage />} />
@@ -90,6 +93,12 @@ function SEO() {
       }}
     />
   );
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <SkeletonPage />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function Header() {
@@ -137,6 +146,7 @@ function Header() {
 }
 
 function HomePage() {
+  const { products } = useCatalog();
   const heroImage = "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1800&q=80";
   return (
     <>
@@ -177,6 +187,7 @@ function TrustBand() {
 }
 
 function CategoryGrid() {
+  const { categories } = useCatalog();
   return (
     <section className="section">
       <SectionHeader eyebrow="Shop by need" title="Featured Categories" cta="/shop" />
@@ -236,6 +247,7 @@ function SectionHeader({ eyebrow, title, cta }: { eyebrow: string; title: string
 }
 
 function ShopPage() {
+  const { products, categories } = useCatalog();
   const { categorySlug } = useParams();
   const [query, setQuery] = useState("");
   const [care, setCare] = useState("All");
@@ -268,6 +280,7 @@ function ShopPage() {
 }
 
 function ProductPage() {
+  const { products } = useCatalog();
   const { slug } = useParams();
   const product = products.find((item) => item.slug === slug) ?? products[0];
   const [size, setSize] = useState(product.sizes[0]);
@@ -307,13 +320,14 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function PlantFinderPage() {
+  const { products } = useCatalog();
   const [answers, setAnswers] = useState<AIPlantFinderAnswers>({});
   const [step, setStep] = useState(0);
   const [sort, setSort] = useState("Best Match");
   const [assistantText, setAssistantText] = useState("Answer a few simple questions and I will recommend plants that match your lifestyle and growing conditions.");
   const questions = recommendationService.getQuestions(answers);
   const done = step >= questions.length;
-  const recs = useMemo(() => recommendationService.recommend(answers), [answers]);
+  const recs = useMemo(() => recommendationService.recommend(answers, products), [answers, products]);
   const sorted = [...recs].sort((a, b) => sort === "Price Low to High" ? a.product.price - b.product.price : sort === "Price High to Low" ? b.product.price - a.product.price : sort === "Beginner Friendly" ? Number(b.product.beginnerFriendly) - Number(a.product.beginnerFriendly) : b.score - a.score);
   const question = questions[step];
 
@@ -398,12 +412,14 @@ function CarePage() {
 }
 
 function WishlistPage() {
+  const { products } = useCatalog();
   const { ids } = useWishlist();
   const items = products.filter((p) => ids.includes(p.id));
   return <PageShell eyebrow="Wishlist" title="Plants you love" text={items.length ? "Move favorites to cart whenever your garden is ready." : "Save plants you love and find them here later."}>{items.length ? <div className="product-grid">{items.map((p) => <ProductCard key={p.id} product={p} />)}</div> : <EmptyState text="Save plants you love and find them here later." action="Browse Plants" to="/shop" />}</PageShell>;
 }
 
 function CartPage() {
+  const { products } = useCatalog();
   const { items, subtotal, removeFromCart, updateQuantity } = useCart();
   const delivery = subtotal > 999 || subtotal === 0 ? 0 : 79;
   const tax = Math.round(subtotal * 0.05);
@@ -443,7 +459,8 @@ function OrderTrackingPage() {
 }
 
 function AccountPage() {
-  return <PageShell eyebrow="Customer Account" title="Welcome back, Amit" text="Profile, orders, wishlist, My Plants, care reminders, addresses, saved payments, and notifications."><div className="dashboard-grid">{["Profile", "Orders", "Wishlist", "My Plants", "Care Reminders", "Addresses", "Saved Payments", "Notifications", "Logout"].map((item) => <Link to={item === "Orders" ? "/orders" : item === "Wishlist" ? "/wishlist" : item === "My Plants" ? "/my-plants" : "#"} key={item}>{item}<ChevronRight size={16} /></Link>)}</div></PageShell>;
+  const { user, logout } = useAuth();
+  return <PageShell eyebrow="Customer Account" title={user ? `Welcome back, ${user.name}` : "Your MittiLok account"} text="Profile, orders, wishlist, My Plants, care reminders, addresses, saved payments, and notifications."><div className="dashboard-grid">{["Profile", "Orders", "Wishlist", "My Plants", "Care Reminders", "Addresses", "Saved Payments", "Notifications"].map((item) => <Link to={item === "Orders" ? "/orders" : item === "Wishlist" ? "/wishlist" : item === "My Plants" ? "/my-plants" : "#"} key={item}>{item}<ChevronRight size={16} /></Link>)}<button onClick={logout}>Logout</button></div></PageShell>;
 }
 
 function BlogPage() {
@@ -461,11 +478,14 @@ function AboutPage() {
 }
 
 function ContactPage() {
-  return <PageShell eyebrow="Contact" title="We are here for your garden" text="Call, WhatsApp, email, or send a plant-care question."><div className="contact-layout"><form className="form-grid"><input placeholder="Name" /><input placeholder="Phone" /><input placeholder="Email" /><textarea placeholder="How can we help?" /><button className="btn primary">Send Message</button></form><aside className="summary"><Metric label="WhatsApp" value="+91 98765 43210" /><Metric label="Email" value="care@mittilok.in" /><Metric label="Location" value="Bengaluru nursery dispatch hub" /><div className="map">Google Maps section</div></aside></div></PageShell>;
+  return <PageShell eyebrow="Contact" title="We are here for your garden" text="Call, WhatsApp, email, or send a plant-care question."><div className="contact-layout"><form className="form-grid"><input placeholder="Name" /><input placeholder="Phone" /><input placeholder="Email" /><textarea placeholder="How can we help?" /><button className="btn primary">Send Message</button></form><aside className="summary"><Metric label="WhatsApp" value="63940 60938" /><Metric label="Email" value="mittilok@gmail.com" /><Metric label="Location" value="Bengaluru nursery dispatch hub" /><div className="map">Google Maps section</div></aside></div></PageShell>;
 }
 
 function AuthPage({ mode }: { mode: "login" | "signup" }) {
-  return <PageShell eyebrow={mode === "login" ? "Login" : "Signup"} title={mode === "login" ? "Welcome back" : "Create your MittiLok account"} text="Protected customer and admin route structure is ready for real authentication."><form className="auth-box"><input placeholder="Email" />{mode === "signup" && <input placeholder="Name" />}<input placeholder="Password" type="password" /><button className="btn primary">{mode === "login" ? "Login" : "Signup"}</button><Link to={mode === "login" ? "/signup" : "/login"}>{mode === "login" ? "Create account" : "Already have an account?"}</Link><Link to="/login">Forgot password?</Link></form></PageShell>;
+  const { login, signup } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  return <PageShell eyebrow={mode === "login" ? "Login" : "Signup"} title={mode === "login" ? "Welcome back" : "Create your MittiLok account"} text="Use your phone number to manage orders, bookings, wishlist, plants, and care reminders."><form className="auth-box" onSubmit={async (event) => { event.preventDefault(); setError(""); const form = new FormData(event.currentTarget); try { if (mode === "login") await login(String(form.get("phone")), String(form.get("password"))); else await signup(String(form.get("name")), String(form.get("phone")), String(form.get("password")), String(form.get("email") ?? "")); navigate("/account"); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to authenticate"); } }}><input name="phone" placeholder="Phone number" required /><input name="email" placeholder="Email (optional)" type="email" />{mode === "signup" && <input name="name" placeholder="Full name" required />}<input name="password" placeholder="Password" type="password" minLength={6} required />{error && <p role="alert">{error}</p>}<button className="btn primary">{mode === "login" ? "Login" : "Create account"}</button><Link to={mode === "login" ? "/signup" : "/login"}>{mode === "login" ? "Create account" : "Already have an account?"}</Link></form></PageShell>;
 }
 
 function PolicyPage({ title }: { title: string }) {
@@ -473,13 +493,26 @@ function PolicyPage({ title }: { title: string }) {
 }
 
 function Admin() {
-  const cards = [["Total Revenue", "Rs 2,86,098"], ["Orders", "148"], ["Customers", "1,240"], ["Products", String(products.length)], ["Low Stock", String(products.filter((p) => p.stock < 12).length)], ["Pending Orders", "23"]];
+  const { user, loading } = useAuth();
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [adminProducts, setAdminProducts] = useState<ApiProduct[]>([]);
+  const [services, setServices] = useState<ApiService[]>([]);
+  const [apiError, setApiError] = useState("");
+  useEffect(() => {
+    if (!user || user.role !== "admin") return;
+    Promise.all([catalogApi.adminCategories(), catalogApi.products(), catalogApi.services()])
+      .then(([categoryResult, productResult, serviceResult]) => { setCategories(categoryResult.categories); setAdminProducts(productResult); setServices(serviceResult); })
+      .catch((error) => setApiError(error instanceof Error ? error.message : "Unable to load admin data"));
+  }, [user]);
+  if (loading) return <SkeletonPage />;
+  if (!user || user.role !== "admin") return <PageShell eyebrow="Admin" title="Admin access required" text="Sign in with an administrator account to manage MittiLok."><Link className="btn primary" to="/login">Go to login</Link></PageShell>;
+  const cards = [["Products", String(adminProducts.length)], ["Services", String(services.length)], ["Categories", String(categories.length)], ["Low Stock", String(adminProducts.filter((p) => p.stock < 12).length)], ["Orders", "API ready"], ["Bookings", "API ready"]];
   const tabs = ["Products", "Orders", "Customers", "Inventory", "Coupons", "Blog", "Analytics"];
-  return <PageShell eyebrow="Admin" title="MittiLok operations dashboard" text="Product, inventory, order, customer, coupon, blog, and analytics management."><div className="admin-cards">{cards.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><div className="admin-tabs">{tabs.map((tab) => <Link key={tab} to={`/admin/${tab.toLowerCase()}`}>{tab}</Link>)}</div><div className="chart-grid"><div><BarChart3 /><h3>Revenue chart</h3></div><div><CalendarDays /><h3>Orders chart</h3></div></div><InventoryTable /></PageShell>;
+  return <PageShell eyebrow="Admin" title="MittiLok operations dashboard" text="Live catalog management backed by MongoDB.">{apiError && <p role="alert">{apiError}</p>}<div className="admin-cards">{cards.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><div className="admin-tabs">{tabs.map((tab) => <Link key={tab} to={`/admin/${tab.toLowerCase()}`}>{tab}</Link>)}</div><div className="chart-grid"><div><BarChart3 /><h3>Revenue chart</h3><p>Connect orders to unlock live analytics.</p></div><div><CalendarDays /><h3>Bookings chart</h3><p>Connect bookings to unlock live analytics.</p></div></div><InventoryTable items={adminProducts} /></PageShell>;
 }
 
-function InventoryTable() {
-  return <div className="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Reserved</th><th>Available</th><th>Status</th></tr></thead><tbody>{products.slice(0, 10).map((product) => <tr key={product.id}><td>{product.name}</td><td>{product.sku}</td><td>{product.stock}</td><td>{Math.min(5, Math.floor(product.stock / 6))}</td><td>{product.stock - Math.min(5, Math.floor(product.stock / 6))}</td><td>{product.availability}</td></tr>)}</tbody></table></div>;
+function InventoryTable({ items }: { items: ApiProduct[] }) {
+  return <div className="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Status</th></tr></thead><tbody>{items.length ? items.slice(0, 10).map((product) => <tr key={product._id}><td>{product.name}</td><td>{product.sku}</td><td>{product.stock}</td><td>{product.status}</td></tr>) : <tr><td colSpan={4}>No products found in MongoDB yet.</td></tr>}</tbody></table></div>;
 }
 
 function Reviews({ productId }: { productId?: string }) {
