@@ -41,7 +41,7 @@ export const products: Product[] = [
   product("p21", "Terracotta Pot Set", "terracotta-pot-set", "Pots & Planters", 549, 799, "Handmade", "photo-1484694887424-9f5c0f3f6c53", ["Any"], "None", "Easy", true, true, false, "None", "Medium", true, false, "500-1000", ["Indoor", "Outdoor", "Balcony"], true, 30),
   product("p22", "Organic Plant Food", "organic-plant-food", "Fertilizers", 249, 329, "Organic", "photo-1591958911259-bee2173bdccc", ["Any"], "None", "Easy", true, true, false, "None", "Small", true, false, "200-500", ["Indoor", "Outdoor"], true, 80),
 ];
-
+//functions
 function product(
   id: string,
   name: string,
