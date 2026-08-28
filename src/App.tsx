@@ -19,8 +19,10 @@ import {
   Truck,
   User,
   X,
+  ChevronLeft,
 } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import { blogPosts, categories, myPlants, orders, products, reviews } from "./data/catalog";
 import { recommendationService } from "./services/recommendationService";
@@ -109,9 +111,8 @@ function Header() {
     <header className="site-header">
       <div className="announcement">Healthy Plants • Secure Packaging • Delivered Across India</div>
       <div className="nav-shell">
-        <Link to="/" className="brand" aria-label="MittiLok Nursery home">
-          <span className="brand-mark"><Sprout size={23} /></span>
-          <span><strong>MittiLok</strong><small>Nursery</small></span>
+        <Link to="/" className="brand brand-logo-only" aria-label="MittiLok Nursery home">
+          <span className="brand-mark"><img src="/logo.png" alt="MittiLok Nursery logo" /></span>
         </Link>
         <nav className="desktop-nav" aria-label="Primary navigation">
           {links.map(([label, to]) => <NavLink key={to} to={to}>{label}</NavLink>)}
@@ -125,26 +126,43 @@ function Header() {
         </div>
       </div>
       {open && (
-        <div className="drawer" role="dialog" aria-modal="true">
-          <button className="icon-btn close" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
-          {links.map(([label, to]) => <Link key={to} to={to} onClick={() => setOpen(false)}>{label}</Link>)}
-          <Link to="/login" onClick={() => setOpen(false)}>Login</Link>
-          <Link to="/admin" onClick={() => setOpen(false)}>Admin</Link>
-        </div>
+        <>
+          <div className="drawer-backdrop" onClick={() => setOpen(false)} />
+          <div className="drawer" role="dialog" aria-modal="true">
+            <button className="icon-btn close" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
+            {links.map(([label, to]) => <Link key={to} to={to} onClick={() => setOpen(false)}>{label}</Link>)}
+            <Link to="/login" onClick={() => setOpen(false)}>Login</Link>
+            <Link to="/admin" onClick={() => setOpen(false)}>Admin</Link>
+          </div>
+        </>
       )}
     </header>
   );
 }
 
 function HomePage() {
-  const heroImage = "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1800&q=80";
+  const heroSlides = [
+    { image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1800&q=80", eyebrow: "MittiLok Nursery", title: "Bring Nature Home", text: "Healthy Plants Delivered Across India" },
+    { image: "https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=1800&q=80", eyebrow: "Grow Something Good", title: "A Greener Everyday", text: "Easy-care plants for every corner of your home" },
+    { image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=1800&q=80", eyebrow: "Plants With Purpose", title: "Find Your Happy Plant", text: "Bring home a little more life, one plant at a time" },
+  ];
+  const [activeSlide, setActiveSlide] = useState(0);
+  const slide = heroSlides[activeSlide];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % heroSlides.length), 5000);
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length]);
+
+  const changeSlide = (direction: number) => setActiveSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
+
   return (
     <>
-      <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url(${heroImage})` }}>
+      <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url(${slide.image})` }}>
         <div className="hero-content">
-          <p className="eyebrow">MittiLok Nursery</p>
-          <h1>Bring Nature Home</h1>
-          <p>Healthy Plants Delivered Across India</p>
+          <p className="eyebrow">{slide.eyebrow}</p>
+          <h1 key={activeSlide}>{slide.title}</h1>
+          <p>{slide.text}</p>
           <div className="button-row">
             <Link className="btn primary" to="/shop">Shop Plants</Link>
             <Link className="btn ghost-light" to="/ai-plant-finder">Find Your Perfect Plant</Link>
@@ -156,6 +174,13 @@ function HomePage() {
           <span>Not sure which plant is right for you?</span>
           <b>Find Your Perfect Plant</b>
         </Link>
+        <div className="hero-controls" aria-label="Hero slides">
+          <button className="icon-btn hero-arrow" onClick={() => changeSlide(-1)} aria-label="Previous slide"><ChevronLeft size={20} /></button>
+          <div className="hero-dots">
+            {heroSlides.map((item, index) => <button key={item.title} className={`hero-dot ${index === activeSlide ? "active" : ""}`} onClick={() => setActiveSlide(index)} aria-label={`Show slide ${index + 1}`} aria-current={index === activeSlide ? "true" : undefined} />)}
+          </div>
+          <button className="icon-btn hero-arrow" onClick={() => changeSlide(1)} aria-label="Next slide"><ChevronRight size={20} /></button>
+        </div>
       </section>
       <TrustBand />
       <CategoryGrid />
@@ -461,7 +486,7 @@ function AboutPage() {
 }
 
 function ContactPage() {
-  return <PageShell eyebrow="Contact" title="We are here for your garden" text="Call, WhatsApp, email, or send a plant-care question."><div className="contact-layout"><form className="form-grid"><input placeholder="Name" /><input placeholder="Phone" /><input placeholder="Email" /><textarea placeholder="How can we help?" /><button className="btn primary">Send Message</button></form><aside className="summary"><Metric label="WhatsApp" value="+91 98765 43210" /><Metric label="Email" value="care@mittilok.in" /><Metric label="Location" value="Bengaluru nursery dispatch hub" /><div className="map">Google Maps section</div></aside></div></PageShell>;
+  return <PageShell eyebrow="Contact" title="We are here for your garden" text="Call, WhatsApp, email, or send a plant-care question."><div className="contact-layout"><form className="form-grid"><input placeholder="Name" /><input placeholder="Phone" /><input placeholder="Email" /><textarea placeholder="How can we help?" /><button className="btn primary">Send Message</button></form><aside className="summary"><Metric label="WhatsApp" value="+91 63940 60938" /><Metric label="Email" value="mittilok@gmail.com" /><Metric label="Address" value="Pachperwa, Uttar Pradesh" /><div className="map">Pachperwa, Uttar Pradesh</div></aside></div></PageShell>;
 }
 
 function AuthPage({ mode }: { mode: "login" | "signup" }) {
@@ -504,7 +529,7 @@ function MobileBottomNav() {
 }
 
 function FloatingWhatsApp() {
-  return <a className="whatsapp" href="https://wa.me/919876543210" aria-label="WhatsApp support"><MessageCircle /></a>;
+  return <a className="whatsapp" href="https://wa.me/916394060938" aria-label="WhatsApp support"><MessageCircle /></a>;
 }
 
 function Footer() {

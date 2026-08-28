@@ -1,7 +1,7 @@
 import type { Role, User } from "../types";
 
 const demoUsers: User[] = [
-  { id: "u1", name: "Amit", email: "amit@example.com", phone: "9876543210", role: "customer" },
+  { id: "u1", name: "Amit", email: "mittilok@gmail.com", phone: "6394060938", role: "customer" },
   { id: "admin", name: "MittiLok Admin", email: "admin@mittilok.in", role: "admin" },
 ];
 

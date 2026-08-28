@@ -149,7 +149,7 @@ export const orders: Order[] = [
     total: 498,
     estimatedDelivery: "2026-08-30",
     paymentStatus: "Paid",
-    address: { id: "a1", name: "Amit", mobile: "9876543210", line1: "Indiranagar", city: "Bengaluru", state: "Karnataka", pinCode: "560038" },
+    address: { id: "a1", name: "Amit", mobile: "6394060938", line1: "Pachperwa", city: "Pachperwa", state: "Uttar Pradesh", pinCode: "" },
   },
 ];
 
