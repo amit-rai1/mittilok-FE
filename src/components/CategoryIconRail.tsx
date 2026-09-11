@@ -1,4 +1,4 @@
-import { Flower2, Leaf, Mic, Sprout, Trees, type LucideIcon } from "lucide-react";
+import { Flower2, Home, Leaf, Mic, Sprout, Trees, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api, mediaUrl } from "../lib/api";
@@ -106,9 +106,21 @@ export function CategoryIconRail() {
         image: null,
       }));
 
+  const homeActive = pathname === "/";
+
   return (
     <nav className="category-icon-rail" aria-label="MittiLok verticals">
       <div className="category-icon-rail-track">
+        <Link
+          to="/"
+          className={`category-icon-item${homeActive ? " active" : ""}`}
+          aria-current={homeActive ? "page" : undefined}
+        >
+          <span className="category-icon-bubble">
+            <Home size={22} strokeWidth={1.85} />
+          </span>
+          <span className="category-icon-label">Home</span>
+        </Link>
         {items.map((cat) => {
           const route = ROUTE_BY_KEY[cat.key] ?? "/nursery";
           const Icon = ICON_BY_KEY[cat.key] ?? Leaf;

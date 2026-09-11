@@ -139,7 +139,7 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url(${slide.image})` }}>
+      <section className="hero hero-home" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url(${slide.image})` }}>
         <div className="hero-content">
           <p className="eyebrow">MittiLok Nursery</p>
           <h1 key={activeSlide}>{slide.title}</h1>
@@ -170,7 +170,7 @@ export default function HomePage() {
 
       {sections.map((section) => (
         <section className="section" key={section.id}>
-          <SectionHeader eyebrow={section.sectionType || "Featured"} title={section.title} cta="/nursery" />
+          <SectionHeader eyebrow={section.sectionType || "Collection"} title={section.title} cta="/nursery" />
         </section>
       ))}
 

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { api, ApiError } from "../lib/api";
 import { usePageTitle } from "../lib/format";
@@ -73,47 +72,65 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
     }
   };
 
+  const shell = (eyebrow: string, title: string, lead: string, form: React.ReactNode, links: React.ReactNode) => (
+    <section className="auth-page">
+      <div className="auth-card">
+        <img className="auth-logo" src="/logo.png" alt="MittiLok" />
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+        <p className="auth-lead">{lead}</p>
+        {form}
+        <div className="auth-links">{links}</div>
+      </div>
+    </section>
+  );
+
   if (mode === "forgot") {
-    return (
-      <PageShell eyebrow="Account" title="Forgot password" text="We'll email reset instructions if the account exists.">
-        <form className="auth-box" onSubmit={(e) => void onForgot(e)}>
-          <input required placeholder="Email or phone" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
-          {error && <p style={{ color: "#b00020" }}>{error}</p>}
-          {message && <p>{message}</p>}
-          <button className="btn primary" disabled={loading}>{loading ? "Sending..." : "Send reset link"}</button>
-          <Link to="/login">Back to login</Link>
-        </form>
-      </PageShell>
+    return shell(
+      "Account",
+      "Forgot password",
+      "We'll email reset instructions if the account exists.",
+      <form onSubmit={(e) => void onForgot(e)}>
+        <input required placeholder="Email or phone" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
+        {error && <p className="auth-error">{error}</p>}
+        {message && <p className="auth-ok">{message}</p>}
+        <button className="btn primary" disabled={loading}>{loading ? "Sending..." : "Send reset link"}</button>
+      </form>,
+      <Link to="/login">Back to login</Link>,
     );
   }
 
   if (mode === "signup") {
-    return (
-      <PageShell eyebrow="Signup" title="Create your MittiLok account" text="Join MittiLok for orders, wishlist, and plant care.">
-        <form className="auth-box" onSubmit={(e) => void onSignup(e)}>
-          <input required placeholder="Name" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} />
-          <input required type="email" placeholder="Email" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} />
-          <input placeholder="Phone" value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} />
-          <input required type="password" placeholder="Password" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} />
-          <input required type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} />
-          {error && <p style={{ color: "#b00020" }}>{error}</p>}
-          <button className="btn primary" disabled={loading}>{loading ? "Creating..." : "Signup"}</button>
-          <Link to="/login">Already have an account?</Link>
-        </form>
-      </PageShell>
+    return shell(
+      "Signup",
+      "Create your account",
+      "Join MittiLok for orders, wishlist, and plant care.",
+      <form onSubmit={(e) => void onSignup(e)}>
+        <input required placeholder="Name" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} />
+        <input required type="email" placeholder="Email" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} />
+        <input placeholder="Phone" value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} />
+        <input required type="password" placeholder="Password" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} />
+        <input required type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} />
+        {error && <p className="auth-error">{error}</p>}
+        <button className="btn primary" disabled={loading}>{loading ? "Creating..." : "Create account"}</button>
+      </form>,
+      <Link to="/login">Already have an account?</Link>,
     );
   }
 
-  return (
-    <PageShell eyebrow="Login" title="Welcome back" text="Sign in with email or phone.">
-      <form className="auth-box" onSubmit={(e) => void onLogin(e)}>
-        <input required placeholder="Email or phone" value={loginForm.emailOrPhone} onChange={(e) => setLoginForm({ ...loginForm, emailOrPhone: e.target.value })} />
-        <input required type="password" placeholder="Password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} />
-        {error && <p style={{ color: "#b00020" }}>{error}</p>}
-        <button className="btn primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
-        <Link to="/signup">Create account</Link>
-        <Link to="/forgot-password">Forgot password?</Link>
-      </form>
-    </PageShell>
+  return shell(
+    "Login",
+    "Welcome back",
+    "Sign in with email or phone.",
+    <form onSubmit={(e) => void onLogin(e)}>
+      <input required placeholder="Email or phone" value={loginForm.emailOrPhone} onChange={(e) => setLoginForm({ ...loginForm, emailOrPhone: e.target.value })} />
+      <input required type="password" placeholder="Password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} />
+      {error && <p className="auth-error">{error}</p>}
+      <button className="btn primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
+    </form>,
+    <>
+      <Link to="/signup">Create account</Link>
+      <Link to="/forgot-password">Forgot password?</Link>
+    </>,
   );
 }

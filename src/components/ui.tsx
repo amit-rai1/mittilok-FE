@@ -1,9 +1,21 @@
 import { Link } from "react-router-dom";
 import { Sprout } from "lucide-react";
 
-export function PageShell({ eyebrow, title, text, children }: { eyebrow: string; title: string; text: string; children: React.ReactNode }) {
+export function PageShell({
+  eyebrow,
+  title,
+  text,
+  children,
+  narrow = false,
+}: {
+  eyebrow: string;
+  title: string;
+  text: string;
+  children: React.ReactNode;
+  narrow?: boolean;
+}) {
   return (
-    <section className="page-shell">
+    <section className={`page-shell${narrow ? " narrow" : ""}`}>
       <div className="page-intro">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

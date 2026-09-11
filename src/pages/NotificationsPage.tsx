@@ -39,7 +39,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <PageShell eyebrow="Notifications" title="Your updates" text={unreadCount ? `${unreadCount} unread` : "You're all caught up."}>
+    <PageShell narrow eyebrow="Notifications" title="Your updates" text={unreadCount ? `${unreadCount} unread` : "You're all caught up."}>
       {items.length > 0 && (
         <button className="btn secondary" onClick={() => void markAll()} style={{ marginBottom: 16 }}>Mark all read</button>
       )}

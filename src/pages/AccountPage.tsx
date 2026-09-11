@@ -10,12 +10,12 @@ export default function AccountPage() {
   usePageTitle("Account");
 
   if (loading) {
-    return <PageShell eyebrow="Account" title="Loading..." text="Checking your session."><div className="skeleton" /></PageShell>;
+    return <PageShell narrow eyebrow="Account" title="Loading..." text="Checking your session."><div className="skeleton" /></PageShell>;
   }
 
   if (!isAuthenticated || !user) {
     return (
-      <PageShell eyebrow="Account" title="Sign in to continue" text="Access orders, wishlist, addresses, and notifications.">
+      <PageShell narrow eyebrow="Account" title="Sign in to continue" text="Access orders, wishlist, addresses, and notifications.">
         <div className="button-row">
           <Link className="btn primary" to="/login">Login</Link>
           <Link className="btn secondary" to="/signup">Create account</Link>
@@ -33,7 +33,7 @@ export default function AccountPage() {
   ];
 
   return (
-    <PageShell eyebrow="Customer Account" title={`Welcome back, ${user.name}`} text={user.email}>
+    <PageShell narrow eyebrow="Customer Account" title={`Welcome back, ${user.name}`} text={user.email}>
       <div className="dashboard-grid">
         {links.map(([label, to]) => (
           <Link to={to} key={label}>{label}<ChevronRight size={16} /></Link>

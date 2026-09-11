@@ -12,55 +12,77 @@ export function ProductCard({ product }: { product: ProductListDto }) {
   const { has, toggleWishlist } = useWishlist();
   const price = product.sellingPrice || product.price;
   const image = mediaUrl(product.thumbnail);
+  const outOfStock = (product.stockQuantity ?? 0) <= 0;
+  const discount =
+    product.discountPercent > 0
+      ? Math.round(product.discountPercent)
+      : product.mrp > price
+        ? Math.round(((product.mrp - price) / product.mrp) * 100)
+        : 0;
+  const wished = has(product.id);
 
   return (
-    <article className="product-card">
-      <Link to={`/product/${product.slug}`} className="product-image">
-        <img src={image} alt={product.name} loading="lazy" />
-        {product.isBestSeller && <span className="pill">Best Seller</span>}
-        {!product.isBestSeller && product.isNewArrival && <span className="pill">New</span>}
-        {!product.isBestSeller && !product.isNewArrival && product.isOrganic && <span className="pill">Organic</span>}
-      </Link>
-      <div className="product-body">
-        <div className="rating">
-          <Star size={15} fill="currentColor" /> {product.averageRating?.toFixed(1) ?? "—"}{" "}
-          <span>({product.reviewCount})</span>
+    <article className={`product-card${outOfStock ? " is-oos" : ""}`}>
+      <div className="product-image-wrap">
+        <Link to={`/product/${product.slug}`} className="product-image">
+          <img src={image} alt={product.name} loading="lazy" />
+          {outOfStock && <span className="oos-overlay">Out of stock</span>}
+        </Link>
+        <div className="product-badges">
+          {product.isBestSeller && <span className="pill">Bestseller</span>}
+          {!product.isBestSeller && product.isNewArrival && <span className="pill pill-new">New</span>}
+          {product.isOrganic && <span className="pill pill-organic">Organic</span>}
+          {discount > 0 && <span className="pill pill-off">{discount}% OFF</span>}
         </div>
-        <Link to={`/product/${product.slug}`}><h3>{product.name}</h3></Link>
-        <p>{product.categoryName ?? "MittiLok"}</p>
-        <div className="price">
-          <strong>{money(price)}</strong>
-          {product.mrp > price && <span>{money(product.mrp)}</span>}
-        </div>
-        <div className="card-actions">
-          <button
-            className="btn compact"
-            onClick={() => void addToCart({
-              productId: product.id,
-              productName: product.name,
-              slug: product.slug,
-              imageUrl: product.thumbnail,
-              unitPrice: price,
-              mrp: product.mrp,
-            })}
-          >
-            Add to Cart
-          </button>
-          <button
-            className={`icon-btn ${has(product.id) ? "active" : ""}`}
-            onClick={() => void toggleWishlist({
+        <button
+          type="button"
+          className={`wishlist-fab${wished ? " active" : ""}`}
+          onClick={() =>
+            void toggleWishlist({
               id: product.id,
               name: product.name,
               slug: product.slug,
               thumbnail: product.thumbnail,
               sellingPrice: price,
               mrp: product.mrp,
-            })}
-            aria-label="Toggle wishlist"
-          >
-            <Heart size={18} />
-          </button>
+            })
+          }
+          aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart size={16} fill={wished ? "currentColor" : "none"} />
+        </button>
+      </div>
+      <div className="product-body">
+        <div className="rating">
+          <Star size={13} fill="currentColor" />
+          <span className="rating-value">{product.averageRating?.toFixed(1) ?? "—"}</span>
+          <span className="rating-count">| {product.reviewCount}</span>
         </div>
+        <Link to={`/product/${product.slug}`}>
+          <h3>{product.name}</h3>
+        </Link>
+        <p className="product-tagline">{product.categoryName ?? "MittiLok Nursery"}</p>
+        <div className="price">
+          <strong>{money(price)}</strong>
+          {product.mrp > price && <span>{money(product.mrp)}</span>}
+        </div>
+        <button
+          type="button"
+          className="btn compact full card-cta"
+          disabled={outOfStock}
+          onClick={() =>
+            void addToCart({
+              productId: product.id,
+              productName: product.name,
+              slug: product.slug,
+              imageUrl: product.thumbnail,
+              unitPrice: price,
+              mrp: product.mrp,
+            })
+          }
+        >
+          {outOfStock ? "Sold out" : "Add to Cart"}
+        </button>
       </div>
     </article>
   );
@@ -72,7 +94,9 @@ export function ProductRail({ title, items, cta = "/nursery" }: { title: string;
     <section className="section">
       <SectionHeader eyebrow="MittiLok picks" title={title} cta={cta} />
       <div className="product-rail">
-        {items.map((product) => <ProductCard key={product.id} product={product} />)}
+        {items.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
       </div>
     </section>
   );
