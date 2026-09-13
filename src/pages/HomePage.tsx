@@ -126,9 +126,16 @@ export default function HomePage() {
     { image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1800&q=80", title: "Bring Nature Home", subtitle: "Healthy Plants Delivered Across India", buttonText: "Shop Nursery", buttonLink: "/nursery" },
   ];
   const slides = banners.length
-    ? banners.map((b) => ({ image: mediaUrl(b.image), title: b.title, subtitle: b.subtitle ?? "", buttonText: b.buttonText ?? "Shop Now", buttonLink: b.buttonLink ?? "/nursery" }))
+    ? banners.map((b) => ({
+        image: mediaUrl(b.image),
+        title: b.title,
+        subtitle: b.subtitle ?? "",
+        buttonText: b.buttonText?.trim() || "Shop Now",
+        buttonLink: b.buttonLink?.trim() || "/nursery",
+      }))
     : fallbackSlides;
   const slide = slides[activeSlide % slides.length];
+  const ctaExternal = /^https?:\/\//i.test(slide.buttonLink);
 
   useEffect(() => {
     const timer = window.setInterval(() => setActiveSlide((c) => (c + 1) % slides.length), 5000);
@@ -139,13 +146,26 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero hero-home" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url(${slide.image})` }}>
+      <section
+        className="hero hero-home"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url("${slide.image}")`,
+        }}
+      >
         <div className="hero-content">
           <p className="eyebrow">MittiLok Nursery</p>
           <h1 key={activeSlide}>{slide.title}</h1>
           <p>{slide.subtitle}</p>
           <div className="button-row">
-            <Link className="btn primary" to={slide.buttonLink || "/nursery"}>{slide.buttonText || "Shop Nursery"}</Link>
+            {ctaExternal ? (
+              <a className="btn primary" href={slide.buttonLink} target="_blank" rel="noopener noreferrer">
+                {slide.buttonText || "Shop Nursery"}
+              </a>
+            ) : (
+              <Link className="btn primary" to={slide.buttonLink || "/nursery"}>
+                {slide.buttonText || "Shop Nursery"}
+              </Link>
+            )}
             <Link className="btn ghost-light" to="/ai-plant-finder">Find Your Perfect Plant</Link>
           </div>
         </div>

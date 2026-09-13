@@ -13,7 +13,18 @@ const PLACEHOLDER_IMAGE =
 export function mediaUrl(path?: string | null, fallback = PLACEHOLDER_IMAGE) {
   if (!path || !path.trim()) return fallback;
   const value = path.trim();
-  if (/^(https?:|data:|blob:)/i.test(value)) return value;
+
+  if (/^(data:|blob:)/i.test(value)) return value;
+
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const url = new URL(value.replace(/ /g, "%20"));
+      url.pathname = encodePathSegments(url.pathname);
+      return url.toString();
+    } catch {
+      return value;
+    }
+  }
 
   let normalized = value.startsWith("/") ? value : `/${value}`;
   if (
@@ -27,7 +38,22 @@ export function mediaUrl(path?: string | null, fallback = PLACEHOLDER_IMAGE) {
     normalized = `/uploads${normalized}`;
   }
 
-  return `${getApiOrigin()}${normalized}`;
+  return `${getApiOrigin()}${encodePathSegments(normalized)}`;
+}
+
+/** Encode each URL path segment so spaces and special chars are safe in CSS url() and fetch. */
+function encodePathSegments(pathname: string) {
+  return pathname
+    .split("/")
+    .map((segment) => {
+      if (!segment) return "";
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    })
+    .join("/");
 }
 
 const TOKEN_KEY = "mittilok-token";
