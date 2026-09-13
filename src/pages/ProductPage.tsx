@@ -1,5 +1,5 @@
-import { Heart, Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProductRail } from "../components/ProductCard";
 import { Metric, PageShell } from "../components/ui";
@@ -23,6 +23,8 @@ export default function ProductPage() {
   const [error, setError] = useState("");
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
   const [reviewMsg, setReviewMsg] = useState("");
+  const [activeImage, setActiveImage] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   usePageTitle(product?.name ?? "Product");
 
@@ -34,6 +36,7 @@ export default function ProductPage() {
       .then(async (p) => {
         if (cancelled) return;
         setProduct(p);
+        setActiveImage(0);
         setVariantId(p.variants[0]?.id ?? null);
         const [rel, rev] = await Promise.all([
           api<PagedResult<ProductListDto>>(`/products${buildQuery({ categoryId: p.categoryId, pageSize: 8 })}`, { auth: false }),
@@ -63,6 +66,21 @@ export default function ProductPage() {
   const images = product.images?.length
     ? product.images.map((i) => mediaUrl(i.url))
     : [mediaUrl(product.thumbnail)];
+  const imageIndex = Math.min(activeImage, images.length - 1);
+  const showImageControls = images.length > 1;
+  const goToImage = (index: number) => {
+    setActiveImage((index + images.length) % images.length);
+  };
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current == null) return;
+    const distance = event.changedTouches[0]?.clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(distance) < 40) return;
+    goToImage(imageIndex + (distance < 0 ? 1 : -1));
+  };
 
   const cartPayload = {
     productId: product.id,
@@ -101,7 +119,39 @@ export default function ProductPage() {
   return (
     <PageShell eyebrow={product.categoryName ?? "Shop"} title={product.name} text={product.shortDescription ?? product.fullDescription ?? ""}>
       <div className="product-detail">
-        <div className="gallery">{images.map((image) => <img key={image} src={image} alt={product.name} />)}</div>
+        <div className="gallery" aria-label={`${product.name} images`}>
+          <div className="gallery-main" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+            <img src={images[imageIndex]} alt={`${product.name} image ${imageIndex + 1} of ${images.length}`} />
+            {showImageControls && (
+              <>
+                <button className="gallery-arrow gallery-arrow-left" type="button" onClick={() => goToImage(imageIndex - 1)} aria-label="Previous product image">
+                  <ChevronLeft size={22} />
+                </button>
+                <button className="gallery-arrow gallery-arrow-right" type="button" onClick={() => goToImage(imageIndex + 1)} aria-label="Next product image">
+                  <ChevronRight size={22} />
+                </button>
+                <span className="gallery-count" aria-live="polite">{imageIndex + 1} / {images.length}</span>
+              </>
+            )}
+          </div>
+          {showImageControls && (
+            <div className="gallery-navigation" aria-label="Choose product image">
+              <div className="gallery-dots">
+                {images.map((image, index) => (
+                  <button
+                    className={`gallery-dot ${index === imageIndex ? "active" : ""}`}
+                    type="button"
+                    key={image}
+                    onClick={() => goToImage(index)}
+                    aria-label={`View product image ${index + 1}`}
+                    aria-current={index === imageIndex ? "true" : undefined}
+                  />
+                ))}
+              </div>
+              <span className="gallery-hint">Swipe or use arrows to see more</span>
+            </div>
+          )}
+        </div>
         <div className="buy-panel">
           <div className="rating">
             <Star size={16} fill="currentColor" /> {product.averageRating?.toFixed(1) ?? "—"} from {product.reviewCount} reviews
