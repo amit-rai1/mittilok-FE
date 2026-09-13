@@ -64,7 +64,9 @@ export default function ProductPage() {
   const price = variant?.price ?? product.sellingPrice ?? product.price;
   const mrp = variant?.mrp ?? product.mrp;
   const images = product.images?.length
-    ? product.images.map((i) => mediaUrl(i.url))
+    ? [...product.images]
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.displayOrder - b.displayOrder)
+      .map((i) => mediaUrl(i.url))
     : [mediaUrl(product.thumbnail)];
   const imageIndex = Math.min(activeImage, images.length - 1);
   const showImageControls = images.length > 1;
