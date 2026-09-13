@@ -1,6 +1,6 @@
 import { Bell, Heart, Home, Menu, MessageCircle, Search, ShoppingBag, ShoppingCart, Sparkles, Sprout, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -17,6 +17,12 @@ const NAV_LINKS: [string, string][] = [
   ["Podcast", "/podcast"],
   ["About", "/about"],
   ["Contact", "/contact"],
+];
+
+const ANNOUNCEMENTS = [
+  "Healthy Plants • Secure Packaging • Delivered Across India",
+  "Shop Nursery essentials & organics with care guidance",
+  "Book Mali visits • Landscaping quotes • Podcast studio",
 ];
 
 function NotificationBell() {
@@ -42,7 +48,9 @@ function NotificationBell() {
         if (!cancelled) setUnread(0);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -84,29 +92,26 @@ function NotificationBell() {
   }
 
   return (
-    <div className="notif-bell" ref={ref} style={{ position: "relative" }}>
+    <div className="notif-bell" ref={ref}>
       <button className="icon-btn badge-btn" onClick={() => void loadDropdown()} aria-label="Notifications">
         <Bell size={19} />
         {unread > 0 && <span>{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="summary" style={{ position: "absolute", right: 0, top: "120%", width: 320, zIndex: 40, padding: 12 }}>
-          <div className="section-header" style={{ marginBottom: 8 }}>
+        <div className="notif-dropdown">
+          <div className="notif-dropdown-head">
             <strong>Notifications</strong>
-            <Link to="/notifications" onClick={() => setOpen(false)}>View all</Link>
+            <Link to="/notifications" onClick={() => setOpen(false)}>
+              View all
+            </Link>
           </div>
           {items.length === 0 ? (
-            <p style={{ margin: 0, opacity: 0.7 }}>No notifications yet.</p>
+            <p className="notif-empty">No notifications yet.</p>
           ) : (
             items.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => void markRead(n.id)}
-                style={{ display: "block", width: "100%", textAlign: "left", background: n.isRead ? "transparent" : "rgba(20,90,50,.08)", border: 0, padding: "8px 6px", cursor: "pointer" }}
-              >
-                <strong style={{ display: "block" }}>{n.title}</strong>
-                <span style={{ fontSize: 13, opacity: 0.8 }}>{n.message}</span>
+              <button key={n.id} type="button" className={`notif-item${n.isRead ? "" : " unread"}`} onClick={() => void markRead(n.id)}>
+                <strong>{n.title}</strong>
+                <span>{n.message}</span>
               </button>
             ))
           )}
@@ -131,50 +136,88 @@ export function Header() {
     setOpen(false);
   };
 
+  const searchForm = (
+    <form onSubmit={onSearch} className="header-search" role="search">
+      <Search size={18} className="header-search-icon" aria-hidden />
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search for plants, pots, organics..."
+        aria-label="Search plants"
+      />
+    </form>
+  );
+
   return (
     <header className="site-header">
-      <div className="announcement">Healthy Plants • Secure Packaging • Delivered Across India</div>
-      <div className="nav-shell">
-        <Link to="/" className="brand brand-logo-only" aria-label="MittiLok Nursery home">
-          <span className="brand-mark"><img src="/logo.png" alt="MittiLok Nursery logo" /></span>
-        </Link>
-        <nav className="desktop-nav" aria-label="Primary navigation">
-          {NAV_LINKS.map(([label, to]) => <NavLink key={to} to={to}>{label}</NavLink>)}
-        </nav>
-        <div className="nav-actions">
-          <form onSubmit={onSearch} className="desktop-only" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search plants..."
-              aria-label="Search"
-              style={{ width: 140, padding: "6px 10px", borderRadius: 999, border: "1px solid rgba(0,0,0,.12)" }}
-            />
-            <button type="submit" className="icon-btn" aria-label="Search"><Search size={19} /></button>
-          </form>
-          <Link to="/nursery" className="icon-btn mobile-only" aria-label="Search"><Search size={19} /></Link>
-          <NotificationBell />
-          <Link to="/wishlist" className="icon-btn badge-btn" aria-label="Wishlist"><Heart size={19} /><span>{ids.length}</span></Link>
-          <Link to="/cart" className="icon-btn badge-btn" aria-label="Cart"><ShoppingCart size={19} /><span>{count}</span></Link>
-          <Link to="/account" className="icon-btn desktop-only" aria-label="Account"><User size={19} /></Link>
-          <button className="icon-btn mobile-only" onClick={() => setOpen(true)} aria-label="Open menu"><Menu size={21} /></button>
+      <div className="announcement" aria-label="Promotions">
+        <div className="announcement-track">
+          {[...ANNOUNCEMENTS, ...ANNOUNCEMENTS].map((text, i) => (
+            <span key={`${text}-${i}`}>{text}</span>
+          ))}
         </div>
       </div>
+      <div className="nav-shell">
+        <Link to="/" className="brand brand-logo-only" aria-label="MittiLok Nursery home">
+          <img className="brand-logo" src="/logo.png" alt="MittiLok" />
+        </Link>
+        <div className="header-search-desktop">{searchForm}</div>
+        <div className="nav-actions">
+          <NotificationBell />
+          <Link to="/wishlist" className="icon-btn badge-btn" aria-label="Wishlist">
+            <Heart size={19} />
+            <span>{ids.length}</span>
+          </Link>
+          <Link to="/cart" className="icon-btn badge-btn" aria-label="Cart">
+            <ShoppingCart size={19} />
+            <span>{count}</span>
+          </Link>
+          <Link to="/account" className="icon-btn desktop-only" aria-label="Account">
+            <User size={19} />
+          </Link>
+          <button className="icon-btn mobile-only" onClick={() => setOpen(true)} aria-label="Open menu">
+            <Menu size={21} />
+          </button>
+        </div>
+      </div>
+      <div className="header-search-mobile">{searchForm}</div>
       {open && (
         <>
           <div className="drawer-backdrop" onClick={() => setOpen(false)} />
           <div className="drawer" role="dialog" aria-modal="true">
-            <button className="icon-btn close" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
-            {NAV_LINKS.map(([label, to]) => <Link key={to} to={to} onClick={() => setOpen(false)}>{label}</Link>)}
-            <Link to="/ai-plant-finder" onClick={() => setOpen(false)}>AI Plant Finder</Link>
-            <Link to="/my-plants" onClick={() => setOpen(false)}>My Plants</Link>
+            <button className="icon-btn close" onClick={() => setOpen(false)} aria-label="Close menu">
+              <X />
+            </button>
+            {NAV_LINKS.map(([label, to]) => (
+              <Link key={to} to={to} onClick={() => setOpen(false)}>
+                {label}
+              </Link>
+            ))}
+            <Link to="/ai-plant-finder" onClick={() => setOpen(false)}>
+              AI Plant Finder
+            </Link>
+            <Link to="/my-plants" onClick={() => setOpen(false)}>
+              My Plants
+            </Link>
             {isAuthenticated ? (
               <>
-                <Link to="/account" onClick={() => setOpen(false)}>{user?.name ?? "Account"}</Link>
-                <button type="button" onClick={() => { logout(); setOpen(false); }}>Logout</button>
+                <Link to="/account" onClick={() => setOpen(false)}>
+                  {user?.name ?? "Account"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setOpen(false);
+                  }}
+                >
+                  Logout
+                </button>
               </>
             ) : (
-              <Link to="/login" onClick={() => setOpen(false)}>Login</Link>
+              <Link to="/login" onClick={() => setOpen(false)}>
+                Login
+              </Link>
             )}
           </div>
         </>
@@ -196,7 +239,11 @@ export function Footer() {
       </div>
       <div>
         <h3>Quick Links</h3>
-        {NAV_LINKS.map(([label, to]) => <Link key={to} to={to}>{label}</Link>)}
+        {NAV_LINKS.map(([label, to]) => (
+          <Link key={to} to={to}>
+            {label}
+          </Link>
+        ))}
       </div>
       <div>
         <h3>Customer Support</h3>
@@ -217,13 +264,23 @@ export function Footer() {
 }
 
 export function MobileBottomNav() {
+  const { pathname } = useLocation();
+  const items = [
+    { to: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
+    { to: "/nursery", label: "Shop", icon: ShoppingBag, match: (p: string) => p.startsWith("/nursery") || p.startsWith("/organics") || p.startsWith("/shop") },
+    { to: "/ai-plant-finder", label: "Find", icon: Sparkles, match: (p: string) => p.startsWith("/ai-plant-finder") },
+    { to: "/my-plants", label: "Plants", icon: Sprout, match: (p: string) => p.startsWith("/my-plants") },
+    { to: "/cart", label: "Cart", icon: ShoppingCart, match: (p: string) => p.startsWith("/cart") },
+  ] as const;
+
   return (
-    <nav className="bottom-nav">
-      <Link to="/"><Home /></Link>
-      <Link to="/nursery"><ShoppingBag /></Link>
-      <Link to="/ai-plant-finder"><Sparkles /></Link>
-      <Link to="/my-plants"><Sprout /></Link>
-      <Link to="/cart"><ShoppingCart /></Link>
+    <nav className="bottom-nav" aria-label="Mobile navigation">
+      {items.map(({ to, label, icon: Icon, match }) => (
+        <Link key={to} to={to} className={match(pathname) ? "active" : undefined}>
+          <Icon size={20} />
+          <span>{label}</span>
+        </Link>
+      ))}
     </nav>
   );
 }
@@ -237,10 +294,15 @@ export function FloatingWhatsApp() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const hideRail = ["/login", "/signup", "/forgot-password"].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+
   return (
     <>
       <Header />
-      <CategoryIconRail />
+      {!hideRail && <CategoryIconRail />}
       <main>{children}</main>
       <MobileBottomNav />
       <FloatingWhatsApp />

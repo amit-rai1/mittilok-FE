@@ -27,7 +27,7 @@ export function BlogArticlePage() {
   const post = blogPosts.find((item) => item.slug === slug) ?? blogPosts[0];
   usePageTitle(post.title);
   return (
-    <PageShell eyebrow={post.category} title={post.title} text={`${post.date} • ${post.readingTime}`}>
+    <PageShell narrow eyebrow={post.category} title={post.title} text={`${post.date} • ${post.readingTime}`}>
       <img className="article-image" src={post.coverImage} alt={post.title} />
       <p className="article-copy">{post.content}</p>
     </PageShell>
@@ -37,7 +37,7 @@ export function BlogArticlePage() {
 export function PolicyPage({ title }: { title: string }) {
   usePageTitle(title);
   return (
-    <PageShell eyebrow="Policy" title={title} text="Clear, customer-friendly policy content ready for legal review.">
+    <PageShell narrow eyebrow="Policy" title={title} text="Clear, customer-friendly policy content ready for legal review.">
       <p className="article-copy">MittiLok protects customer information, handles orders transparently, and resolves plant delivery issues through documented support workflows.</p>
     </PageShell>
   );
