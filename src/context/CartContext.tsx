@@ -128,10 +128,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, isAuthenticated, mergeLocalIntoServer]);
 
-  const items = isAuthenticated ? (serverCart?.items ?? []) : localItems;
-
   const value = useMemo<CartContextValue>(() => ({
-    items,
+    items: isAuthenticated ? (serverCart?.items ?? []) : localItems,
     loading,
     async addToCart(input) {
       const qty = input.quantity ?? 1;
@@ -190,9 +188,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       ? (serverCart?.subtotal ?? 0)
       : localItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     count: isAuthenticated
-      ? (serverCart?.itemCount ?? items.reduce((sum, item) => sum + item.quantity, 0))
+      ? (serverCart?.itemCount ?? (serverCart?.items ?? []).reduce((sum, item) => sum + item.quantity, 0))
       : localItems.reduce((sum, item) => sum + item.quantity, 0),
-  }), [items, loading, isAuthenticated, localItems, serverCart, loadServer]);
+  }), [loading, isAuthenticated, localItems, serverCart, loadServer]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

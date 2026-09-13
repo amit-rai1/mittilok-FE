@@ -66,7 +66,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
     const match = aliases[rootSlug] ?? [rootSlug];
     return tree.find((c) => match.includes(c.slug));
   }, [tree, rootSlug]);
-  const children = root?.children ?? [];
+  const children = useMemo(() => root?.children ?? [], [root]);
   const activeChild = useMemo(
     () => (subSlug ? children.find((c) => c.slug === subSlug) : undefined),
     [children, subSlug],
