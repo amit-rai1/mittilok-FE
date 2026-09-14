@@ -258,20 +258,35 @@ h1, h2, h3,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-.brand-logo {
-  display: block;
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  object-fit: cover;
-  object-position: 12% 50%;
-  flex-shrink: 0;
+  overflow: hidden;
   background: #f59d1e;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 6% 50%;
+  transform: scale(1.55);
+  transform-origin: 12% center;
+}
 .brand-mark {
   display: none;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .header-search {
@@ -1033,15 +1048,24 @@ textarea { min-height: 130px; resize: vertical; }
   display: grid;
   gap: var(--space-3);
 }
-.auth-card .auth-logo {
+.auth-card .auth-logo-wrap {
+  display: grid;
+  place-items: center;
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  object-fit: cover;
-  object-position: 12% 50%;
+  overflow: hidden;
   margin: 0 auto var(--space-2);
   background: #f59d1e;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+.auth-card .auth-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 6% 50%;
+  transform: scale(1.55);
+  transform-origin: 12% center;
 }
 .auth-card .eyebrow {
   text-align: center;
@@ -1156,7 +1180,8 @@ th, td { padding: .85rem; text-align: left; border-bottom: 1px solid var(--line)
   }
   .announcement { font-size: .7rem; padding: .24rem 0; }
   .nav-shell { min-height: 48px; padding: .3rem .75rem .15rem; }
-  .brand-logo { width: 36px; height: 36px; max-width: none; }
+  .brand-logo { width: 100%; height: 100%; max-width: none; }
+  .brand-logo-only { width: 36px; height: 36px; }
   .category-icon-rail { top: var(--header-sticky-offset-mobile); }
   .category-icon-rail-track {
     justify-content: space-evenly;

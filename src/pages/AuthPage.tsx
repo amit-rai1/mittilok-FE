@@ -75,7 +75,9 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
   const shell = (eyebrow: string, title: string, lead: string, form: React.ReactNode, links: React.ReactNode) => (
     <section className="auth-page">
       <div className="auth-card">
-        <img className="auth-logo" src="/logo.png" alt="MittiLok" />
+        <span className="auth-logo-wrap">
+          <img className="auth-logo" src="/logo.png" alt="MittiLok" />
+        </span>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p className="auth-lead">{lead}</p>

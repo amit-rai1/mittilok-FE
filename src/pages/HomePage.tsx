@@ -143,19 +143,30 @@ export default function HomePage() {
   }, [slides.length]);
 
   const changeSlide = (direction: number) => setActiveSlide((c) => (c + direction + slides.length) % slides.length);
+  const artLed = !slide.subtitle?.trim();
+  const heroGradient = artLed
+    ? "linear-gradient(90deg, rgba(8,42,20,.35), rgba(8,42,20,.08))"
+    : "linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18))";
 
   return (
     <>
       <section
-        className="hero hero-home"
+        className={`hero hero-home${artLed ? " hero-art-led" : ""}`}
         style={{
-          backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.78), rgba(8,42,20,.18)), url("${slide.image}")`,
+          backgroundImage: `${heroGradient}, url("${slide.image}")`,
         }}
       >
         <div className="hero-content">
           <p className="eyebrow">MittiLok Nursery</p>
-          <h1 key={activeSlide}>{slide.title}</h1>
-          <p>{slide.subtitle}</p>
+          {/* Titles are often baked into banner art — avoid stacking duplicate headlines */}
+          {artLed ? (
+            <h1 key={activeSlide} className="sr-only">{slide.title}</h1>
+          ) : (
+            <>
+              <h1 key={activeSlide}>{slide.title}</h1>
+              <p>{slide.subtitle}</p>
+            </>
+          )}
           <div className="button-row">
             {ctaExternal ? (
               <a className="btn primary" href={slide.buttonLink} target="_blank" rel="noopener noreferrer">

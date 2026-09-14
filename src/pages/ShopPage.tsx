@@ -46,6 +46,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
   const page = Number(params.get("page") ?? "1") || 1;
 
   const [tree, setTree] = useState<CategoryTreeDto[]>([]);
+  const [treeReady, setTreeReady] = useState(false);
   const [products, setProducts] = useState<ProductListDto[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -64,7 +65,15 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
       "organic-gardening-products": ["organic-gardening-products", "mittilok-organics", "organics"],
     };
     const match = aliases[rootSlug] ?? [rootSlug];
-    return tree.find((c) => match.includes(c.slug));
+    const bySlug = tree.find((c) => match.includes(c.slug));
+    if (bySlug) return bySlug;
+    if (rootSlug === "nursery") {
+      return tree.find((c) => /nursery/i.test(c.name) || /nursery/i.test(c.slug));
+    }
+    if (rootSlug === "organic-gardening-products") {
+      return tree.find((c) => /organic/i.test(c.name) || /organic/i.test(c.slug));
+    }
+    return undefined;
   }, [tree, rootSlug]);
   const children = useMemo(() => root?.children ?? [], [root]);
   const activeChild = useMemo(
@@ -73,6 +82,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
   );
 
   const categoryId = activeChild?.id ?? root?.id;
+  const categoryPending = Boolean(rootSlug) && (!treeReady || categoryId == null);
   const basePath = rootSlug === "organic-gardening-products" ? "/organics" : rootSlug === "nursery" ? "/nursery" : "/shop";
 
   const title = activeChild?.name
@@ -83,8 +93,14 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
 
   useEffect(() => {
     void api<CategoryTreeDto[]>("/categories/tree?activeOnly=true", { auth: false })
-      .then(setTree)
-      .catch(() => setTree([]));
+      .then((data) => {
+        setTree(data);
+        setTreeReady(true);
+      })
+      .catch(() => {
+        setTree([]);
+        setTreeReady(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -116,7 +132,18 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
     const sortOpts = sortMap[sort] ?? sortMap.featured;
     const band = PRICE_BANDS.find((b) => b.id === priceBand);
 
-    if (rootSlug && tree.length === 0) {
+    // Wait until the vertical root resolves so we never flash unfiltered / empty counts
+    if (rootSlug && !treeReady) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (rootSlug && categoryId == null) {
+      setProducts([]);
+      setTotalCount(0);
+      setTotalPages(1);
+      setLoading(false);
       return () => {
         cancelled = true;
       };
@@ -152,7 +179,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [query, categoryId, organic, stock, priceBand, sort, page, rootSlug, tree.length]);
+  }, [query, categoryId, organic, stock, priceBand, sort, page, rootSlug, treeReady]);
 
   const legacyRedirect = !rootSlug && legacyCategory ? LEGACY_CATEGORY_REDIRECTS[legacyCategory] : undefined;
   if (legacyRedirect) {
@@ -261,7 +288,9 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
       <div className="collection-intro">
         <p className="eyebrow">{rootSlug ? (root?.name?.replace(/^MittiLok\s+/i, "") ?? "Shop") : "Shop"}</p>
         <h1>{title}</h1>
-        <p className="collection-count">{totalCount} products</p>
+        <p className="collection-count">
+          {loading || categoryPending ? "Loading…" : `${totalCount} products`}
+        </p>
       </div>
 
       {rootSlug && children.length > 0 && (
@@ -289,7 +318,9 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
         <button type="button" className="toolbar-btn" onClick={() => setSortOpen(true)}>
           Sort by · {sortLabel}
         </button>
-        <span className="toolbar-count desktop-only">{totalCount} products</span>
+        <span className="toolbar-count desktop-only">
+          {loading || categoryPending ? "Loading…" : `${totalCount} products`}
+        </span>
       </div>
 
       <div className="shop-layout shop-layout-ugaoo">
@@ -307,7 +338,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
         </aside>
 
         <div>
-          {loading ? (
+          {loading || categoryPending ? (
             <div className="skeleton grid" />
           ) : products.length ? (
             <div className="product-grid">{products.map((p) => <ProductCard key={p.id} product={p} />)}</div>
