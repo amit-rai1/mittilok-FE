@@ -30,7 +30,7 @@ export type FestivalCampaign = {
   products: FestivalProduct[];
 };
 export type FestivalPot = { id: number; name: string; image?: string | null; priceDelta: number; stock: number };
-export type FestivalAddon = { id: number; name: string; description?: string | null; price: number };
+export type FestivalAddon = { id: number; name: string; description?: string | null; image?: string | null; price: number };
 export type FestivalPrice = {
   unitPrice: number;
   subtotal: number;
@@ -65,6 +65,54 @@ function money(n: number) {
   return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
+function formatWindow(start?: string | null, end?: string | null) {
+  if (!start && !end) return null;
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  return fmt(start || end || "");
+}
+
+function CountdownChips({ target }: { target?: string | null }) {
+  const c = useCountdown(target);
+  if (!target || c.expired) return null;
+  const parts = [
+    [c.days, "Days"],
+    [c.hours, "Hrs"],
+    [c.mins, "Min"],
+    [c.secs, "Sec"],
+  ] as const;
+  return (
+    <div className="festival-countdown" aria-label="Booking closes in">
+      {parts.map(([value, label]) => (
+        <div key={label} className="festival-countdown-chip">
+          <strong>{String(value).padStart(2, "0")}</strong>
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CampaignCard({ campaign }: { campaign: FestivalCampaign }) {
+  return (
+    <Link to={`/festival/${campaign.slug}`} className="festival-campaign-card">
+      <div className="festival-campaign-media">
+        {campaign.banner ? <img src={mediaUrl(campaign.banner)} alt="" /> : <div className="skeleton" />}
+        <span className={`festival-badge ${campaign.isBookingOpen ? "open" : "closed"}`}>
+          {campaign.isBookingOpen ? "Booking open" : "Closed"}
+        </span>
+      </div>
+      <div className="festival-campaign-body">
+        <h3>{campaign.name}</h3>
+        <p>{campaign.offerStrip || "Pre-book plants with pots & gifts"}</p>
+        {campaign.isBookingOpen ? <CountdownChips target={campaign.bookingEnd} /> : null}
+        <span className="btn primary festival-card-cta">{campaign.isBookingOpen ? "Pre-book now" : "View campaign"}</span>
+      </div>
+    </Link>
+  );
+}
+
 export function FestivalListPage() {
   usePageTitle("Festival Pre-Booking");
   const [items, setItems] = useState<FestivalCampaign[]>([]);
@@ -77,23 +125,16 @@ export function FestivalListPage() {
   }, []);
 
   return (
-    <section className="page-shell">
-      <p className="eyebrow">Gifting</p>
-      <h1>Festival Pre-Booking</h1>
-      <p>Reserve festival plants with pot & gift options. Pay a small advance to confirm.</p>
+    <section className="festival-list page-shell">
+      <header className="festival-list-hero">
+        <p className="eyebrow">Gifting</p>
+        <h1>Festival Pre-Booking</h1>
+        <p className="festival-lead">Reserve festival plants with pot & gift options. Pay a small advance to confirm your booking.</p>
+      </header>
       {error && <p className="auth-error">{error}</p>}
-      <div className="product-grid" style={{ marginTop: "1.5rem" }}>
+      <div className="festival-campaign-grid">
         {items.map((c) => (
-          <Link key={c.id} to={`/festival/${c.slug}`} className="product-card" style={{ textDecoration: "none", color: "inherit" }}>
-            {c.banner ? <img src={mediaUrl(c.banner)} alt="" /> : <div className="skeleton" style={{ aspectRatio: "4/3" }} />}
-            <div className="card-body">
-              <h3>{c.name}</h3>
-              <p>{c.offerStrip || "Pre-booking open"}</p>
-              <span className="btn secondary" style={{ marginTop: 8 }}>
-                {c.isBookingOpen ? "Book now" : "View campaign"}
-              </span>
-            </div>
-          </Link>
+          <CampaignCard key={c.id} campaign={c} />
         ))}
       </div>
       {items.length === 0 && !error && <p className="empty-inline">No live festival campaigns right now.</p>}
@@ -106,7 +147,7 @@ export function FestivalLandingPage() {
   const [campaign, setCampaign] = useState<FestivalCampaign | null>(null);
   const [error, setError] = useState("");
   usePageTitle(campaign?.name ?? "Festival");
-  const countdown = useCountdown(campaign?.bookingEnd);
+  const delivery = formatWindow(campaign?.deliveryStart, campaign?.deliveryEnd);
 
   useEffect(() => {
     if (!slug) return;
@@ -131,47 +172,48 @@ export function FestivalLandingPage() {
   }
 
   return (
-    <>
+    <div className="festival-landing">
       <section
-        className="hero hero-home hero-art-led"
+        className="hero hero-home hero-art-led festival-hero"
         style={{
-          backgroundImage: `linear-gradient(90deg, rgba(8,42,20,.45), rgba(8,42,20,.12)), url("${mediaUrl(campaign.banner)}")`,
-          minHeight: 360,
+          backgroundImage: `linear-gradient(105deg, rgba(8,42,20,.72), rgba(8,42,20,.28)), url("${mediaUrl(campaign.banner)}")`,
         }}
       >
         <div className="hero-content">
-          <p className="eyebrow">Pre-Booking {campaign.isBookingOpen ? "Open" : "Closed"}</p>
+          <p className="eyebrow">Pre-booking {campaign.isBookingOpen ? "open" : "closed"}</p>
           <h1>{campaign.name}</h1>
-          {campaign.offerStrip && <p>{campaign.offerStrip}</p>}
+          {campaign.offerStrip && <p className="festival-offer">{campaign.offerStrip}</p>}
+          <CountdownChips target={campaign.isBookingOpen ? campaign.bookingEnd : null} />
+          {delivery && <p className="festival-delivery-line">Delivery window: {delivery}</p>}
           <div className="button-row">
             <a className="btn primary" href="#festival-products">
-              Book Now
+              Book now
             </a>
+            <Link className="btn secondary" to="/festival">
+              All festivals
+            </Link>
           </div>
-          {!countdown.expired && (
-            <p style={{ marginTop: "1rem", fontWeight: 700 }}>
-              Closes in {countdown.days}d {countdown.hours}h {countdown.mins}m {countdown.secs}s
-            </p>
-          )}
         </div>
       </section>
-      <section className="page-shell" id="festival-products">
-        {campaign.description && <p>{campaign.description}</p>}
-        <div className="product-grid">
+
+      <section className="page-shell festival-products" id="festival-products">
+        {campaign.description && <p className="festival-desc">{campaign.description}</p>}
+        <h2>Choose a plant</h2>
+        <div className="festival-product-grid">
           {(campaign.products ?? []).map((p) => {
             const price = p.festivalPrice ?? p.basePrice;
             return (
-              <Link
-                key={p.id}
-                to={`/festival/${campaign.slug}/book/${p.productSlug}`}
-                className="product-card"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                {p.thumbnail ? <img src={mediaUrl(p.thumbnail)} alt="" /> : <div className="skeleton" style={{ aspectRatio: "1" }} />}
-                <div className="card-body">
+              <Link key={p.id} to={`/festival/${campaign.slug}/book/${p.productSlug}`} className="festival-product-card">
+                <div className="festival-product-media">
+                  {p.thumbnail ? <img src={mediaUrl(p.thumbnail)} alt="" /> : <div className="skeleton" />}
+                </div>
+                <div className="festival-product-body">
                   <h3>{p.productName}</h3>
                   <p className="price">
                     <strong>{money(price)}</strong>
+                    {p.festivalPrice != null && p.festivalPrice < p.basePrice ? (
+                      <span className="festival-mrp">{money(p.basePrice)}</span>
+                    ) : null}
                   </p>
                   <span className="btn primary">Customise & book</span>
                 </div>
@@ -179,8 +221,9 @@ export function FestivalLandingPage() {
             );
           })}
         </div>
+        {(campaign.products ?? []).length === 0 && <p className="empty-inline">Plants will appear here soon.</p>}
       </section>
-    </>
+    </div>
   );
 }
 
@@ -211,6 +254,7 @@ export function FestivalBookPage() {
 
   const product = campaign?.products.find((p) => p.productSlug === productSlug);
   usePageTitle(product?.productName ?? "Book festival plant");
+  const delivery = formatWindow(campaign?.deliveryStart, campaign?.deliveryEnd);
 
   useEffect(() => {
     if (!slug) return;
@@ -294,106 +338,143 @@ export function FestivalBookPage() {
     <section className="page-shell festival-book">
       <p className="eyebrow">{campaign.name}</p>
       <h1>{product.productName}</h1>
-      {product.thumbnail && (
-        <img src={mediaUrl(product.thumbnail)} alt="" style={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 16 }} />
-      )}
+      {delivery && <p className="festival-delivery-line muted">Delivery: {delivery}</p>}
+      {product.thumbnail && <img className="festival-book-hero-img" src={mediaUrl(product.thumbnail)} alt="" />}
 
-      <form onSubmit={(e) => void onSubmit(e)} style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
+      <form className="festival-book-form" onSubmit={(e) => void onSubmit(e)}>
         {product.variants.length > 0 && (
-          <label>
-            Size
-            <select value={variantId} onChange={(e) => setVariantId(e.target.value ? Number(e.target.value) : "")}>
-              <option value="">Default</option>
-              {product.variants.map((v) => (
-                <option key={v.id} value={v.id} disabled={v.stock < qty}>
-                  {v.name} · {money(v.price)} {v.stock < qty ? "(OOS)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+          <section className="festival-step">
+            <h2>
+              <span className="festival-step-num">1</span> Size
+            </h2>
+            <label>
+              <select value={variantId} onChange={(e) => setVariantId(e.target.value ? Number(e.target.value) : "")}>
+                <option value="">Default</option>
+                {product.variants.map((v) => (
+                  <option key={v.id} value={v.id} disabled={v.stock < qty}>
+                    {v.name} · {money(v.price)} {v.stock < qty ? "(OOS)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
         )}
 
-        <fieldset>
-          <legend>Pot</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 8 }}>
+        <section className="festival-step">
+          <h2>
+            <span className="festival-step-num">2</span> Pot
+          </h2>
+          <div className="festival-option-grid">
             {pots.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={potId === p.id ? "btn primary" : "btn secondary"}
+                className={`festival-option-tile${potId === p.id ? " selected" : ""}`}
                 disabled={p.stock < qty}
                 onClick={() => setPotId(p.id)}
               >
-                {p.name}
-                <small style={{ display: "block" }}>+{money(p.priceDelta)}</small>
-                {p.stock < qty ? <small>Out of stock</small> : null}
+                {p.image ? <img src={mediaUrl(p.image)} alt="" /> : <div className="festival-option-placeholder" />}
+                <strong>{p.name}</strong>
+                <small>+{money(p.priceDelta)}</small>
+                {p.stock < qty ? <small className="oos">Out of stock</small> : null}
               </button>
             ))}
           </div>
           {potOos && <p className="auth-error">Selected pot is out of stock. Please choose another pot.</p>}
-        </fieldset>
+        </section>
 
-        <fieldset>
-          <legend>Add-ons</legend>
-          {addons.map((a) => {
-            const checked = addonIds.includes(a.id);
-            return (
-              <label key={a.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => setAddonIds((prev) => (checked ? prev.filter((id) => id !== a.id) : [...prev, a.id]))}
-                />
-                {a.name} · {money(a.price)}
-              </label>
-            );
-          })}
-        </fieldset>
+        <section className="festival-step">
+          <h2>
+            <span className="festival-step-num">3</span> Add-ons
+          </h2>
+          <div className="festival-addon-list">
+            {addons.map((a) => {
+              const checked = addonIds.includes(a.id);
+              return (
+                <label key={a.id} className={`festival-addon-row${checked ? " selected" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => setAddonIds((prev) => (checked ? prev.filter((id) => id !== a.id) : [...prev, a.id]))}
+                  />
+                  {a.image ? <img src={mediaUrl(a.image)} alt="" /> : <span className="festival-option-placeholder sm" />}
+                  <span className="festival-addon-meta">
+                    <strong>{a.name}</strong>
+                  </span>
+                  <span className="festival-addon-price">{money(a.price)}</span>
+                </label>
+              );
+            })}
+            {addons.length === 0 && <p className="empty-inline">No add-ons for this festival.</p>}
+          </div>
+        </section>
 
-        <label>
-          Quantity
-          <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} />
-        </label>
+        <section className="festival-step">
+          <h2>
+            <span className="festival-step-num">4</span> Quantity
+          </h2>
+          <div className="festival-qty-row">
+            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>
+              −
+            </button>
+            <input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+              aria-label="Quantity"
+            />
+            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => q + 1)}>
+              +
+            </button>
+          </div>
+        </section>
 
-        <div
-          className="summary"
-          style={{ position: "sticky", bottom: 72, background: "#fff", border: "1px solid var(--line)", borderRadius: 12, padding: "1rem" }}
-        >
-          {price?.error ? <p className="auth-error">{price.error}</p> : null}
-          {price && !price.error && (
-            <>
-              <p>
-                Unit {money(price.unitPrice)} · Subtotal <strong>{money(price.subtotal)}</strong>
-              </p>
-              <p>
-                Advance ({price.advancePercent}%) <strong>{money(price.advanceRequired)}</strong>
-              </p>
-              <p>Balance due later {money(price.balanceDue)}</p>
-            </>
-          )}
-        </div>
-
-        <h2>Delivery details</h2>
-        <input required placeholder="Full name" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
-        <input required placeholder="Phone" value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} />
-        <input placeholder="Email" value={form.customerEmail} onChange={(e) => setForm({ ...form, customerEmail: e.target.value })} />
-        <input placeholder="Address" value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} />
-        <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-        <input placeholder="Pincode" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} />
-        <input
-          placeholder="Preferred delivery slot"
-          value={form.preferredDeliverySlot}
-          onChange={(e) => setForm({ ...form, preferredDeliverySlot: e.target.value })}
-        />
-        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input type="checkbox" checked={form.markAdvancePaid} onChange={(e) => setForm({ ...form, markAdvancePaid: e.target.checked })} />
-          Mark advance as paid now (MVP confirm)
-        </label>
+        <section className="festival-step">
+          <h2>
+            <span className="festival-step-num">5</span> Delivery details
+          </h2>
+          <div className="festival-fields">
+            <input required placeholder="Full name" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
+            <input required placeholder="Phone" value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} />
+            <input placeholder="Email" value={form.customerEmail} onChange={(e) => setForm({ ...form, customerEmail: e.target.value })} />
+            <input placeholder="Address" value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} />
+            <div className="festival-fields-row">
+              <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              <input placeholder="Pincode" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} />
+            </div>
+            <input
+              placeholder="Preferred delivery slot"
+              value={form.preferredDeliverySlot}
+              onChange={(e) => setForm({ ...form, preferredDeliverySlot: e.target.value })}
+            />
+            <label className="festival-check">
+              <input type="checkbox" checked={form.markAdvancePaid} onChange={(e) => setForm({ ...form, markAdvancePaid: e.target.checked })} />
+              Mark advance as paid now (MVP confirm)
+            </label>
+          </div>
+        </section>
 
         {error && <p className="auth-error">{error}</p>}
-        <button className="btn primary" disabled={submitting || !campaign.isBookingOpen || !!price?.error || potOos}>
-          {submitting ? "Booking…" : `Confirm · Pay ${price ? money(price.advanceRequired) : "advance"}`}
-        </button>
+
+        <div className="festival-sticky-bar">
+          <div className="festival-sticky-price">
+            {price?.error ? (
+              <p className="auth-error">{price.error}</p>
+            ) : price ? (
+              <>
+                <small>Advance ({price.advancePercent}%)</small>
+                <strong>{money(price.advanceRequired)}</strong>
+                <span>Total {money(price.grandTotal)} · Balance {money(price.balanceDue)}</span>
+              </>
+            ) : (
+              <small>Calculating…</small>
+            )}
+          </div>
+          <button className="btn primary" disabled={submitting || !campaign.isBookingOpen || !!price?.error || potOos}>
+            {submitting ? "Booking…" : `Confirm · Pay ${price ? money(price.advanceRequired) : "advance"}`}
+          </button>
+        </div>
       </form>
     </section>
   );
@@ -403,19 +484,29 @@ export function FestivalConfirmationPage() {
   usePageTitle("Booking confirmed");
   const { state } = useLocation() as { state?: BookingState };
   return (
-    <section className="page-shell auth-page">
-      <div className="auth-card">
+    <section className="page-shell festival-confirm">
+      <div className="festival-confirm-card">
         <p className="eyebrow">Festival pre-booking</p>
         <h1>Booking confirmed</h1>
         {state?.bookingNumber ? (
-          <>
-            <p>
-              Booking ID <strong>{state.bookingNumber}</strong>
-            </p>
-            <p>Grand total {money(state.grandTotal ?? 0)}</p>
-            <p>Advance paid {money(state.advancePaid ?? 0)}</p>
-            <p>Balance due {money(state.balanceDue ?? 0)}</p>
-          </>
+          <dl className="festival-confirm-stats">
+            <div>
+              <dt>Booking ID</dt>
+              <dd>{state.bookingNumber}</dd>
+            </div>
+            <div>
+              <dt>Grand total</dt>
+              <dd>{money(state.grandTotal ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Advance paid</dt>
+              <dd>{money(state.advancePaid ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Balance due</dt>
+              <dd>{money(state.balanceDue ?? 0)}</dd>
+            </div>
+          </dl>
         ) : (
           <p>Your festival pre-booking was received.</p>
         )}

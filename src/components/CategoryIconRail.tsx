@@ -1,7 +1,8 @@
-import { Flower2, Home, Leaf, Mic, Sprout, Trees, type LucideIcon } from "lucide-react";
+import { Flower2, Gift, Home, Leaf, Mic, Sprout, Trees, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api, mediaUrl } from "../lib/api";
+import { useHasOpenFestival } from "../lib/festivalNav";
 import type { CategoryTreeDto } from "../types";
 
 /** Canonical vertical key → storefront route */
@@ -68,18 +69,44 @@ function isActiveRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
+type RailItem = { id: number; name: string; slug: string; key: string; image?: string | null };
+
+function RailLink({
+  to,
+  label,
+  active,
+  icon: Icon,
+  imageSrc,
+}: {
+  to: string;
+  label: string;
+  active: boolean;
+  icon: LucideIcon;
+  imageSrc?: string;
+}) {
+  return (
+    <Link to={to} className={`category-icon-item${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>
+      <span className="category-icon-bubble">
+        {imageSrc ? <img src={imageSrc} alt="" className="category-icon-photo" /> : <Icon size={22} strokeWidth={1.85} />}
+      </span>
+      <span className="category-icon-label">{label}</span>
+    </Link>
+  );
+}
+
 export function CategoryIconRail() {
   const { pathname } = useLocation();
   const [roots, setRoots] = useState<CategoryTreeDto[]>([]);
+  const showFestival = useHasOpenFestival();
 
   useEffect(() => {
     let cancelled = false;
     api<CategoryTreeDto[]>("/categories/tree?activeOnly=true", { auth: false })
       .then((tree) => {
         if (cancelled) return;
-        const preferred = PREFERRED_KEYS.map((key) =>
-          tree.find((c) => resolveKey(c.slug, c.name) === key),
-        ).filter(Boolean) as CategoryTreeDto[];
+        const preferred = PREFERRED_KEYS.map((key) => tree.find((c) => resolveKey(c.slug, c.name) === key)).filter(
+          Boolean,
+        ) as CategoryTreeDto[];
         setRoots(preferred.length ? preferred : tree.filter((c) => resolveKey(c.slug, c.name)));
       })
       .catch(() => {
@@ -90,7 +117,7 @@ export function CategoryIconRail() {
     };
   }, []);
 
-  const items: { id: number; name: string; slug: string; key: string; image?: string | null }[] = roots.length
+  const items: RailItem[] = roots.length
     ? roots.map((cat) => ({
         id: cat.id,
         name: cat.name,
@@ -106,43 +133,43 @@ export function CategoryIconRail() {
         image: null,
       }));
 
+  const landscapingIdx = items.findIndex((c) => c.key === "landscaping");
+  const beforeFestival = landscapingIdx >= 0 ? items.slice(0, landscapingIdx + 1) : items.filter((c) => c.key !== "podcast");
+  const afterFestival =
+    landscapingIdx >= 0 ? items.slice(landscapingIdx + 1) : items.filter((c) => c.key === "podcast");
+
   const homeActive = pathname === "/";
+  const festivalActive = isActiveRoute(pathname, "/festival");
 
   return (
     <nav className="category-icon-rail" aria-label="MittiLok verticals">
       <div className="category-icon-rail-track">
-        <Link
-          to="/"
-          className={`category-icon-item${homeActive ? " active" : ""}`}
-          aria-current={homeActive ? "page" : undefined}
-        >
-          <span className="category-icon-bubble">
-            <Home size={22} strokeWidth={1.85} />
-          </span>
-          <span className="category-icon-label">Home</span>
-        </Link>
-        {items.map((cat) => {
+        <RailLink to="/" label="Home" active={homeActive} icon={Home} />
+        {beforeFestival.map((cat) => {
           const route = ROUTE_BY_KEY[cat.key] ?? "/nursery";
-          const Icon = ICON_BY_KEY[cat.key] ?? Leaf;
-          const active = isActiveRoute(pathname, route);
-          const imageSrc = cat.image ? mediaUrl(cat.image, "") : "";
-
           return (
-            <Link
+            <RailLink
               key={cat.id}
               to={route}
-              className={`category-icon-item${active ? " active" : ""}`}
-              aria-current={active ? "page" : undefined}
-            >
-              <span className="category-icon-bubble">
-                {imageSrc ? (
-                  <img src={imageSrc} alt="" className="category-icon-photo" />
-                ) : (
-                  <Icon size={22} strokeWidth={1.85} />
-                )}
-              </span>
-              <span className="category-icon-label">{shortLabel(cat.key, cat.name)}</span>
-            </Link>
+              label={shortLabel(cat.key, cat.name)}
+              active={isActiveRoute(pathname, route)}
+              icon={ICON_BY_KEY[cat.key] ?? Leaf}
+              imageSrc={cat.image ? mediaUrl(cat.image, "") : undefined}
+            />
+          );
+        })}
+        {showFestival ? <RailLink to="/festival" label="Festival" active={festivalActive} icon={Gift} /> : null}
+        {afterFestival.map((cat) => {
+          const route = ROUTE_BY_KEY[cat.key] ?? "/nursery";
+          return (
+            <RailLink
+              key={cat.id}
+              to={route}
+              label={shortLabel(cat.key, cat.name)}
+              active={isActiveRoute(pathname, route)}
+              icon={ICON_BY_KEY[cat.key] ?? Leaf}
+              imageSrc={cat.image ? mediaUrl(cat.image, "") : undefined}
+            />
           );
         })}
       </div>

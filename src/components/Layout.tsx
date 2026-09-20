@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { api } from "../lib/api";
+import { useHasOpenFestival } from "../lib/festivalNav";
 import type { NotificationDto } from "../types";
 import { CategoryIconRail } from "./CategoryIconRail";
 
@@ -19,6 +20,11 @@ const NAV_LINKS: [string, string][] = [
   ["About", "/about"],
   ["Contact", "/contact"],
 ];
+
+function useNavLinks() {
+  const showFestival = useHasOpenFestival();
+  return NAV_LINKS.filter(([label]) => showFestival || label !== "Festival");
+}
 
 const ANNOUNCEMENTS = [
   "Healthy Plants • Secure Packaging • Delivered Across India",
@@ -129,6 +135,7 @@ export function Header() {
   const { ids } = useWishlist();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const navLinks = useNavLinks();
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,7 +196,7 @@ export function Header() {
             <button className="icon-btn close" onClick={() => setOpen(false)} aria-label="Close menu">
               <X />
             </button>
-            {NAV_LINKS.map(([label, to]) => (
+            {navLinks.map(([label, to]) => (
               <Link key={to} to={to} onClick={() => setOpen(false)}>
                 {label}
               </Link>
@@ -228,6 +235,7 @@ export function Header() {
 }
 
 export function Footer() {
+  const navLinks = useNavLinks();
   return (
     <footer className="footer">
       <div>
@@ -240,7 +248,7 @@ export function Footer() {
       </div>
       <div>
         <h3>Quick Links</h3>
-        {NAV_LINKS.map(([label, to]) => (
+        {navLinks.map(([label, to]) => (
           <Link key={to} to={to}>
             {label}
           </Link>

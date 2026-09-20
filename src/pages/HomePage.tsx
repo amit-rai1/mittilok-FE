@@ -6,7 +6,7 @@ import { SectionHeader } from "../components/ui";
 import { api, buildQuery, mediaUrl } from "../lib/api";
 import { usePageTitle } from "../lib/format";
 import type { BannerDto, CategoryTreeDto, HomepageSectionDto, PagedResult, ProductListDto, ReviewDto } from "../types";
-import type { FestivalCampaign } from "./FestivalPages";
+import { useCountdown, type FestivalCampaign } from "./FestivalPages";
 
 function FestivalHomeTeaser() {
   const [items, setItems] = useState<FestivalCampaign[]>([]);
@@ -17,21 +17,47 @@ function FestivalHomeTeaser() {
   }, []);
   if (!items.length) return null;
   return (
-    <section className="section page-shell">
+    <section className="section page-shell festival-home-teaser">
       <SectionHeader eyebrow="Festival" title="Pre-booking open" cta="/festival" />
-      <div className="product-grid">
+      <div className="festival-campaign-grid">
         {items.map((c) => (
-          <Link key={c.id} to={`/festival/${c.slug}`} className="product-card" style={{ textDecoration: "none", color: "inherit" }}>
-            {c.banner ? <img src={mediaUrl(c.banner)} alt="" /> : null}
-            <div className="card-body">
-              <h3>{c.name}</h3>
-              <p>{c.offerStrip || "Book plants with pots & gifts"}</p>
-              <span className="btn primary">Pre-book now</span>
-            </div>
-          </Link>
+          <FestivalTeaserCard key={c.id} campaign={c} />
         ))}
       </div>
     </section>
+  );
+}
+
+function FestivalTeaserCard({ campaign }: { campaign: FestivalCampaign }) {
+  const countdown = useCountdown(campaign.bookingEnd);
+  return (
+    <Link to={`/festival/${campaign.slug}`} className="festival-campaign-card">
+      <div className="festival-campaign-media">
+        {campaign.banner ? <img src={mediaUrl(campaign.banner)} alt="" /> : null}
+        <span className="festival-badge open">Booking open</span>
+      </div>
+      <div className="festival-campaign-body">
+        <h3>{campaign.name}</h3>
+        <p>{campaign.offerStrip || "Book plants with pots & gifts"}</p>
+        {!countdown.expired && (
+          <div className="festival-countdown compact">
+            <div className="festival-countdown-chip">
+              <strong>{countdown.days}</strong>
+              <span>Days</span>
+            </div>
+            <div className="festival-countdown-chip">
+              <strong>{countdown.hours}</strong>
+              <span>Hrs</span>
+            </div>
+            <div className="festival-countdown-chip">
+              <strong>{countdown.mins}</strong>
+              <span>Min</span>
+            </div>
+          </div>
+        )}
+        <span className="btn primary festival-card-cta">Pre-book now</span>
+      </div>
+    </Link>
   );
 }
 
