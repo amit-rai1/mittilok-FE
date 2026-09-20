@@ -6,6 +6,34 @@ import { SectionHeader } from "../components/ui";
 import { api, buildQuery, mediaUrl } from "../lib/api";
 import { usePageTitle } from "../lib/format";
 import type { BannerDto, CategoryTreeDto, HomepageSectionDto, PagedResult, ProductListDto, ReviewDto } from "../types";
+import type { FestivalCampaign } from "./FestivalPages";
+
+function FestivalHomeTeaser() {
+  const [items, setItems] = useState<FestivalCampaign[]>([]);
+  useEffect(() => {
+    api<FestivalCampaign[]>("/festivals", { auth: false })
+      .then((list) => setItems(list.filter((c) => c.isBookingOpen).slice(0, 3)))
+      .catch(() => setItems([]));
+  }, []);
+  if (!items.length) return null;
+  return (
+    <section className="section page-shell">
+      <SectionHeader eyebrow="Festival" title="Pre-booking open" cta="/festival" />
+      <div className="product-grid">
+        {items.map((c) => (
+          <Link key={c.id} to={`/festival/${c.slug}`} className="product-card" style={{ textDecoration: "none", color: "inherit" }}>
+            {c.banner ? <img src={mediaUrl(c.banner)} alt="" /> : null}
+            <div className="card-body">
+              <h3>{c.name}</h3>
+              <p>{c.offerStrip || "Book plants with pots & gifts"}</p>
+              <span className="btn primary">Pre-book now</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function TrustBand() {
   const items = [
@@ -198,6 +226,8 @@ export default function HomePage() {
       </section>
 
       <TrustBand />
+
+      <FestivalHomeTeaser />
 
       {sections.map((section) => (
         <section className="section" key={section.id}>

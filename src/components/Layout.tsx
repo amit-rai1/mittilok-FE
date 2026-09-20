@@ -12,6 +12,7 @@ const NAV_LINKS: [string, string][] = [
   ["Home", "/"],
   ["Nursery", "/nursery"],
   ["Organics", "/organics"],
+  ["Festival", "/festival"],
   ["Mali", "/services/mali"],
   ["Landscaping", "/landscaping"],
   ["Podcast", "/podcast"],

@@ -15,6 +15,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import { OrdersPage, OrderTrackingPage } from "./pages/OrdersPage";
 import { CarePage, MyPlantsPage, PlantFinderPage, PlantProfilePage } from "./pages/PlantPages";
 import PodcastPage from "./pages/PodcastPage";
+import { FestivalBookPage, FestivalConfirmationPage, FestivalLandingPage, FestivalListPage } from "./pages/FestivalPages";
 import ProductPage from "./pages/ProductPage";
 import ServicesPage from "./pages/ServicesPage";
 import ShopPage from "./pages/ShopPage";
@@ -66,6 +67,10 @@ export default function App() {
           <Route path="/mali" element={<ServicesPage />} />
           <Route path="/landscaping" element={<LandscapingPage />} />
           <Route path="/podcast" element={<PodcastPage />} />
+          <Route path="/festival" element={<FestivalListPage />} />
+          <Route path="/festival/:slug" element={<FestivalLandingPage />} />
+          <Route path="/festival/:slug/book/:productSlug" element={<FestivalBookPage />} />
+          <Route path="/festival/:slug/confirmation" element={<FestivalConfirmationPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogArticlePage />} />
           <Route path="/about" element={<AboutPage />} />
