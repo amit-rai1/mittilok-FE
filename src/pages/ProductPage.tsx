@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ProductRail } from "../components/ProductCard";
 import { Metric, PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +13,7 @@ import type { CreateReviewRequest, PagedResult, ProductDetailDto, ProductListDto
 export default function ProductPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, has } = useWishlist();
   const { isAuthenticated } = useAuth();
@@ -98,7 +99,7 @@ export default function ProductPage() {
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     try {
@@ -163,13 +164,26 @@ export default function ProductPage() {
             {mrp > price && <span>{money(mrp)}</span>}
           </div>
           {product.variants.length > 0 && (
-            <label>Variant
-              <select value={variantId ?? ""} onChange={(e) => setVariantId(Number(e.target.value))}>
-                {product.variants.map((v) => <option key={v.id} value={v.id}>{v.name} — {money(v.price)}</option>)}
-              </select>
-            </label>
+            <div className="variant-chips">
+              <p className="variant-label">Choose option</p>
+              <div className="variant-chip-row" role="listbox" aria-label="Product options">
+                {product.variants.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="option"
+                    aria-selected={variantId === v.id}
+                    className={`variant-chip${variantId === v.id ? " active" : ""}`}
+                    onClick={() => setVariantId(v.id)}
+                  >
+                    <strong>{v.name}</strong>
+                    <span>{money(v.price)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          <div className="button-row">
+          <div className="button-row pdp-actions">
             <button className="btn primary" onClick={() => void addToCart(cartPayload)}>Add to Cart</button>
             <button
               className="btn secondary"
@@ -193,6 +207,15 @@ export default function ProductPage() {
               aria-label="Add to wishlist"
             >
               <Heart />
+            </button>
+          </div>
+          <div className="pdp-sticky-cart">
+            <div>
+              <strong>{product.name}</strong>
+              <span>{money(price)}</span>
+            </div>
+            <button type="button" className="btn primary" onClick={() => void addToCart(cartPayload)}>
+              Add to cart
             </button>
           </div>
           <div className="care-guide">

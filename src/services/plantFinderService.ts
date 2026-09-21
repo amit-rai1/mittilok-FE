@@ -6,10 +6,10 @@ export const plantFinderService = {
     return recommendationService.getQuestions(answers);
   },
   async getRecommendations(answers: AIPlantFinderAnswers) {
-    return recommendationService.recommend(answers);
+    return recommendationService.recommend([], answers);
   },
   async sendFollowUp(message: string, answers: AIPlantFinderAnswers) {
-    const recommendations = recommendationService.recommend(answers);
+    const recommendations = recommendationService.recommend([], answers);
     return recommendationService.followUp(message, recommendations);
   },
 };

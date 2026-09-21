@@ -1,9 +1,8 @@
-import { Bell, Heart, Home, Menu, MessageCircle, Search, ShoppingBag, ShoppingCart, Sparkles, Sprout, User, X } from "lucide-react";
+import { Bell, Home, Menu, MessageCircle, Search, ShoppingBag, ShoppingCart, Sparkles, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext";
 import { api } from "../lib/api";
 import { useHasOpenFestival } from "../lib/festivalNav";
 import type { NotificationDto } from "../types";
@@ -39,6 +38,7 @@ function NotificationBell() {
   const [items, setItems] = useState<NotificationDto[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,7 +70,7 @@ function NotificationBell() {
 
   const loadDropdown = async () => {
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     setOpen((v) => !v);
@@ -92,7 +92,12 @@ function NotificationBell() {
 
   if (!isAuthenticated) {
     return (
-      <Link to="/login" className="icon-btn" aria-label="Notifications">
+      <Link
+        to="/login"
+        state={{ from: "/account?tab=notifications" }}
+        className="icon-btn"
+        aria-label="Notifications"
+      >
         <Bell size={19} />
       </Link>
     );
@@ -128,14 +133,100 @@ function NotificationBell() {
   );
 }
 
+function AccountMenu() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+
+  const clearClose = () => {
+    if (closeTimer.current != null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const openMenu = () => {
+    clearClose();
+    setOpen(true);
+  };
+
+  const scheduleClose = () => {
+    clearClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 160);
+  };
+
+  useEffect(() => () => clearClose(), []);
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        to="/login"
+        state={{ from: location.pathname + location.search }}
+        className="icon-btn"
+        aria-label="Account"
+      >
+        <User size={19} />
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={`account-menu${open ? " open" : ""}`}
+      onMouseEnter={openMenu}
+      onMouseLeave={scheduleClose}
+    >
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label="Account menu"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <User size={19} />
+      </button>
+      {open && (
+        <div className="account-dropdown" role="menu">
+          {user?.name && <p className="account-dropdown-name">{user.name}</p>}
+          <Link role="menuitem" to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+          <Link role="menuitem" to="/wishlist" onClick={() => setOpen(false)}>Wishlist</Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              logout();
+              setOpen(false);
+              navigate("/");
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [annIndex, setAnnIndex] = useState(0);
   const { count } = useCart();
-  const { ids } = useWishlist();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const navLinks = useNavLinks();
+  const desktopLinks = useNavLinks().filter(([label]) =>
+    ["Nursery", "Organics", "Festival", "Mali", "Landscaping", "Podcast", "About"].includes(label),
+  );
+
+  useEffect(() => {
+    const t = window.setInterval(() => setAnnIndex((i) => (i + 1) % ANNOUNCEMENTS.length), 4500);
+    return () => window.clearInterval(t);
+  }, []);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,20 +241,19 @@ export function Header() {
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search for plants, pots, organics..."
+        placeholder="Search plants, pots, organics..."
         aria-label="Search plants"
       />
     </form>
   );
 
+  const isActive = (to: string) =>
+    location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+
   return (
     <header className="site-header">
       <div className="announcement" aria-label="Promotions">
-        <div className="announcement-track">
-          {[...ANNOUNCEMENTS, ...ANNOUNCEMENTS].map((text, i) => (
-            <span key={`${text}-${i}`}>{text}</span>
-          ))}
-        </div>
+        <p className="announcement-static" key={annIndex}>{ANNOUNCEMENTS[annIndex]}</p>
       </div>
       <div className="nav-shell">
         <Link to="/" className="brand brand-logo-only" aria-label="MittiLok Nursery home">
@@ -172,23 +262,26 @@ export function Header() {
         <div className="header-search-desktop">{searchForm}</div>
         <div className="nav-actions">
           <NotificationBell />
-          <Link to="/wishlist" className="icon-btn badge-btn" aria-label="Wishlist">
-            <Heart size={19} />
-            <span>{ids.length}</span>
-          </Link>
           <Link to="/cart" className="icon-btn badge-btn" aria-label="Cart">
             <ShoppingCart size={19} />
             <span>{count}</span>
           </Link>
-          <Link to="/account" className="icon-btn desktop-only" aria-label="Account">
-            <User size={19} />
-          </Link>
+          <AccountMenu />
           <button className="icon-btn mobile-only" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu size={21} />
           </button>
         </div>
       </div>
       <div className="header-search-mobile">{searchForm}</div>
+      <nav className="desktop-link-row" aria-label="Primary">
+        {desktopLinks.map(([label, to]) => (
+          <Link key={to} to={to} className={isActive(to) ? "active" : undefined}>
+            {label}
+          </Link>
+        ))}
+        <Link to="/blog" className={isActive("/blog") ? "active" : undefined}>Blog</Link>
+        <Link to="/ai-plant-finder" className={isActive("/ai-plant-finder") ? "active" : undefined}>Find plant</Link>
+      </nav>
       {open && (
         <>
           <div className="drawer-backdrop" onClick={() => setOpen(false)} />
@@ -204,11 +297,11 @@ export function Header() {
             <Link to="/ai-plant-finder" onClick={() => setOpen(false)}>
               AI Plant Finder
             </Link>
-            <Link to="/my-plants" onClick={() => setOpen(false)}>
-              My Plants
-            </Link>
+            <Link to="/blog" onClick={() => setOpen(false)}>Blog</Link>
             {isAuthenticated ? (
               <>
+                <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+                <Link to="/wishlist" onClick={() => setOpen(false)}>Wishlist</Link>
                 <Link to="/account" onClick={() => setOpen(false)}>
                   {user?.name ?? "Account"}
                 </Link>
@@ -217,6 +310,7 @@ export function Header() {
                   onClick={() => {
                     logout();
                     setOpen(false);
+                    navigate("/");
                   }}
                 >
                   Logout
@@ -235,38 +329,39 @@ export function Header() {
 }
 
 export function Footer() {
-  const navLinks = useNavLinks();
+  const showFestival = useHasOpenFestival();
   return (
     <footer className="footer">
       <div>
         <h2>MittiLok Nursery</h2>
-        <p>Bring Nature Home.</p>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input placeholder="Enter your email" />
+        <p>Bring Nature Home — healthy plants, organics, and garden care across India.</p>
+        <form onSubmit={(e) => e.preventDefault()} className="footer-subscribe">
+          <input placeholder="Email for garden tips" aria-label="Email" />
           <button type="submit">Subscribe</button>
         </form>
       </div>
       <div>
-        <h3>Quick Links</h3>
-        {navLinks.map(([label, to]) => (
-          <Link key={to} to={to}>
-            {label}
-          </Link>
-        ))}
-      </div>
-      <div>
-        <h3>Customer Support</h3>
-        <Link to="/contact">Contact</Link>
-        <Link to="/orders">Order Tracking</Link>
+        <h3>Shop</h3>
+        <Link to="/nursery">Nursery</Link>
+        <Link to="/organics">Organics</Link>
+        {showFestival && <Link to="/festival">Festival pre-booking</Link>}
         <Link to="/ai-plant-finder">AI Plant Finder</Link>
-        <Link to="/my-plants">My Plants</Link>
       </div>
       <div>
-        <h3>Policies</h3>
-        <Link to="/privacy-policy">Privacy Policy</Link>
-        <Link to="/terms">Terms & Conditions</Link>
-        <Link to="/refund-policy">Refund Policy</Link>
-        <Link to="/refund-policy">Shipping Policy</Link>
+        <h3>Services</h3>
+        <Link to="/services/mali">MittiLok Mali</Link>
+        <Link to="/landscaping">Landscaping</Link>
+        <Link to="/podcast">Podcast studio</Link>
+        <Link to="/blog">Care tips</Link>
+      </div>
+      <div>
+        <h3>Help</h3>
+        <Link to="/contact">Contact</Link>
+        <Link to="/orders">Order tracking</Link>
+        <Link to="/account">My account</Link>
+        <Link to="/privacy-policy">Privacy</Link>
+        <Link to="/terms">Terms</Link>
+        <Link to="/refund-policy">Refunds & shipping</Link>
       </div>
     </footer>
   );
@@ -274,18 +369,19 @@ export function Footer() {
 
 export function MobileBottomNav() {
   const { pathname } = useLocation();
+  const { isAuthenticated } = useAuth();
   const items = [
     { to: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
     { to: "/nursery", label: "Shop", icon: ShoppingBag, match: (p: string) => p.startsWith("/nursery") || p.startsWith("/organics") || p.startsWith("/shop") },
     { to: "/ai-plant-finder", label: "Find", icon: Sparkles, match: (p: string) => p.startsWith("/ai-plant-finder") },
-    { to: "/my-plants", label: "Plants", icon: Sprout, match: (p: string) => p.startsWith("/my-plants") },
+    { to: isAuthenticated ? "/account" : "/login", label: "Account", icon: User, match: (p: string) => p.startsWith("/account") },
     { to: "/cart", label: "Cart", icon: ShoppingCart, match: (p: string) => p.startsWith("/cart") },
   ] as const;
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
       {items.map(({ to, label, icon: Icon, match }) => (
-        <Link key={to} to={to} className={match(pathname) ? "active" : undefined}>
+        <Link key={label} to={to} className={match(pathname) ? "active" : undefined}>
           <Icon size={20} />
           <span>{label}</span>
         </Link>

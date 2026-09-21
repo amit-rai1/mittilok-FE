@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { api, mediaUrl } from "../lib/api";
 import { usePageTitle } from "../lib/format";
 
@@ -230,6 +231,8 @@ export function FestivalLandingPage() {
 export function FestivalBookPage() {
   const { slug, productSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [campaign, setCampaign] = useState<FestivalCampaign | null>(null);
   const [pots, setPots] = useState<FestivalPot[]>([]);
   const [addons, setAddons] = useState<FestivalAddon[]>([]);
@@ -257,7 +260,14 @@ export function FestivalBookPage() {
   const delivery = formatWindow(campaign?.deliveryStart, campaign?.deliveryEnd);
 
   useEffect(() => {
-    if (!slug) return;
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: location.pathname + location.search } });
+    }
+  }, [authLoading, isAuthenticated, navigate, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!slug || !isAuthenticated) return;
     Promise.all([
       api<FestivalCampaign>(`/festivals/${slug}`, { auth: false }),
       api<FestivalPot[]>("/festivals/options/pots", { auth: false }),
@@ -269,10 +279,10 @@ export function FestivalBookPage() {
         setAddons(a);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Unable to load"));
-  }, [slug]);
+  }, [slug, isAuthenticated]);
 
   useEffect(() => {
-    if (!campaign || !product) return;
+    if (!isAuthenticated || !campaign || !product) return;
     const t = window.setTimeout(() => {
       void api<FestivalPrice>("/festivals/price-preview", {
         method: "POST",
@@ -290,11 +300,11 @@ export function FestivalBookPage() {
         .catch((e) => setError(e instanceof Error ? e.message : "Price error"));
     }, 200);
     return () => window.clearTimeout(t);
-  }, [campaign, product, variantId, potId, addonIds, qty]);
+  }, [isAuthenticated, campaign, product, variantId, potId, addonIds, qty]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!campaign || !product) return;
+    if (!isAuthenticated || !campaign || !product) return;
     if (!campaign.isBookingOpen) {
       setError("Booking window is closed.");
       return;
@@ -304,7 +314,6 @@ export function FestivalBookPage() {
     try {
       const booking = await api<BookingState>("/festivals/book", {
         method: "POST",
-        auth: false,
         body: {
           campaignId: campaign.id,
           productId: product.productId,
@@ -510,9 +519,14 @@ export function FestivalConfirmationPage() {
         ) : (
           <p>Your festival pre-booking was received.</p>
         )}
-        <Link className="btn primary" to="/festival">
-          Back to festivals
-        </Link>
+        <div className="button-row">
+          <Link className="btn primary" to="/orders#festival-bookings">
+            View my bookings
+          </Link>
+          <Link className="btn secondary" to="/festival">
+            Back to festivals
+          </Link>
+        </div>
       </div>
     </section>
   );

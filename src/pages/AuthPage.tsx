@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api, ApiError } from "../lib/api";
+import { safeReturnPath } from "../lib/authRedirect";
 import { usePageTitle } from "../lib/format";
 
 export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot" }) {
   usePageTitle(mode === "login" ? "Login" : mode === "signup" ? "Sign up" : "Forgot password");
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,13 +18,16 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
   const [signupForm, setSignupForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [forgotEmail, setForgotEmail] = useState("");
 
+  const afterAuthPath = () =>
+    safeReturnPath((location.state as { from?: unknown } | null)?.from) ?? "/";
+
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
       await login(loginForm);
-      navigate("/account");
+      navigate(afterAuthPath(), { replace: true });
     } catch (err) {
       setError(err instanceof ApiError || err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -45,7 +50,7 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
         phone: signupForm.phone || null,
         password: signupForm.password,
       });
-      navigate("/account");
+      navigate(afterAuthPath(), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -116,7 +121,7 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
         {error && <p className="auth-error">{error}</p>}
         <button className="btn primary" disabled={loading}>{loading ? "Creating..." : "Create account"}</button>
       </form>,
-      <Link to="/login">Already have an account?</Link>,
+      <Link to="/login" state={location.state}>Already have an account?</Link>,
     );
   }
 
@@ -131,7 +136,7 @@ export default function AuthPage({ mode }: { mode: "login" | "signup" | "forgot"
       <button className="btn primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
     </form>,
     <>
-      <Link to="/signup">Create account</Link>
+      <Link to="/signup" state={location.state}>Create account</Link>
       <Link to="/forgot-password">Forgot password?</Link>
     </>,
   );

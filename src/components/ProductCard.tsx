@@ -65,6 +65,7 @@ export function ProductCard({ product }: { product: ProductListDto }) {
         <div className="price">
           <strong>{money(price)}</strong>
           {product.mrp > price && <span>{money(product.mrp)}</span>}
+          {discount > 0 && <em className="price-off">{discount}% off</em>}
         </div>
         <button
           type="button"
@@ -88,11 +89,21 @@ export function ProductCard({ product }: { product: ProductListDto }) {
   );
 }
 
-export function ProductRail({ title, items, cta = "/nursery" }: { title: string; items: ProductListDto[]; cta?: string }) {
+export function ProductRail({
+  title,
+  items,
+  cta = "/nursery",
+  eyebrow = "MittiLok picks",
+}: {
+  title: string;
+  items: ProductListDto[];
+  cta?: string;
+  eyebrow?: string;
+}) {
   if (!items.length) return null;
   return (
     <section className="section">
-      <SectionHeader eyebrow="MittiLok picks" title={title} cta={cta} />
+      <SectionHeader eyebrow={eyebrow} title={title} cta={cta} />
       <div className="product-rail">
         {items.map((product) => (
           <ProductCard key={product.id} product={product} />

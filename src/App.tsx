@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { SkeletonPage } from "./components/ui";
 import AboutPage from "./pages/AboutPage";
@@ -12,8 +12,8 @@ import { BlogArticlePage, BlogPage, PolicyPage } from "./pages/ContentPages";
 import HomePage from "./pages/HomePage";
 import LandscapingPage from "./pages/LandscapingPage";
 import NotificationsPage from "./pages/NotificationsPage";
-import { OrdersPage, OrderTrackingPage } from "./pages/OrdersPage";
-import { CarePage, MyPlantsPage, PlantFinderPage, PlantProfilePage } from "./pages/PlantPages";
+import { FestivalBookingDetailPage, OrdersPage, OrderTrackingPage } from "./pages/OrdersPage";
+import { PlantFinderPage } from "./pages/PlantPages";
 import PodcastPage from "./pages/PodcastPage";
 import { FestivalBookPage, FestivalConfirmationPage, FestivalLandingPage, FestivalListPage } from "./pages/FestivalPages";
 import ProductPage from "./pages/ProductPage";
@@ -53,9 +53,9 @@ export default function App() {
           <Route path="/organics/:subSlug" element={<ShopPage rootSlug="organic-gardening-products" />} />
           <Route path="/product/:slug" element={<ProductPage />} />
           <Route path="/ai-plant-finder" element={<PlantFinderPage />} />
-          <Route path="/my-plants" element={<MyPlantsPage />} />
-          <Route path="/my-plants/:id" element={<PlantProfilePage />} />
-          <Route path="/care" element={<CarePage />} />
+          <Route path="/my-plants" element={<Navigate to="/account" replace />} />
+          <Route path="/my-plants/:id" element={<Navigate to="/account" replace />} />
+          <Route path="/care" element={<Navigate to="/account" replace />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
@@ -68,6 +68,7 @@ export default function App() {
           <Route path="/landscaping" element={<LandscapingPage />} />
           <Route path="/podcast" element={<PodcastPage />} />
           <Route path="/festival" element={<FestivalListPage />} />
+          <Route path="/festival/bookings/:id" element={<FestivalBookingDetailPage />} />
           <Route path="/festival/:slug" element={<FestivalLandingPage />} />
           <Route path="/festival/:slug/book/:productSlug" element={<FestivalBookPage />} />
           <Route path="/festival/:slug/confirmation" element={<FestivalConfirmationPage />} />

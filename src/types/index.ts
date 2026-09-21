@@ -99,7 +99,18 @@ export interface AIPlantFinderAnswers {
 }
 
 export interface PlantRecommendation {
-  product: CatalogProduct;
+  product: {
+    id: number;
+    slug: string;
+    name: string;
+    categoryName?: string | null;
+    price: number;
+    mrp: number;
+    thumbnail: string;
+    isBestSeller: boolean;
+    isOrganic: boolean;
+    isFeatured: boolean;
+  };
   score: number;
   reasons: string[];
 }
@@ -478,6 +489,52 @@ export interface OrderDto {
   trackingNumber?: string | null;
   createdAt: string;
   itemCount: number;
+}
+
+export interface FestivalBookingAddonImageDto {
+  name: string;
+  image?: string | null;
+}
+
+export interface FestivalBookingItemDto {
+  productId: number;
+  productName?: string | null;
+  productImage?: string | null;
+  variantName?: string | null;
+  potName?: string | null;
+  potImage?: string | null;
+  addonNames?: string | null;
+  addonImages?: FestivalBookingAddonImageDto[];
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface FestivalBookingDto {
+  id: number;
+  bookingNumber: string;
+  festivalCampaignId: number;
+  festivalName?: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  preferredDeliverySlot?: string | null;
+  notes?: string | null;
+  subtotal: number;
+  grandTotal: number;
+  advancePercent: number;
+  advanceRequired: number;
+  advancePaid: number;
+  balanceDue: number;
+  status: string | number;
+  paymentStatus: string | number;
+  createdAt: string;
+  items: FestivalBookingItemDto[];
 }
 
 export interface OrderDetailDto extends Omit<OrderDto, "itemCount"> {
