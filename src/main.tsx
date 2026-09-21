@@ -7,6 +7,12 @@ import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import "./styles.css";
 
+// HashRouter routes live in the hash; clear leftover pathnames like /login#/...
+if (typeof window !== "undefined" && window.location.pathname !== "/") {
+  const { hash, search } = window.location;
+  window.history.replaceState(null, "", `/${search}${hash}`);
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <HashRouter>

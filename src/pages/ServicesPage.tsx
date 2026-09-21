@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { EmptyState, PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { api, buildQuery } from "../lib/api";
@@ -10,6 +10,7 @@ export default function ServicesPage() {
   usePageTitle("MittiLok Mali");
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [services, setServices] = useState<ServiceDto[]>([]);
   const [selected, setSelected] = useState<ServiceDto | null>(null);
   const [bookingDate, setBookingDate] = useState("");
@@ -41,7 +42,7 @@ export default function ServicesPage() {
   const book = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     if (!selected || !bookingDate) {

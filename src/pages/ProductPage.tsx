@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ProductRail } from "../components/ProductCard";
 import { Metric, PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +13,7 @@ import type { CreateReviewRequest, PagedResult, ProductDetailDto, ProductListDto
 export default function ProductPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, has } = useWishlist();
   const { isAuthenticated } = useAuth();
@@ -98,7 +99,7 @@ export default function ProductPage() {
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     try {

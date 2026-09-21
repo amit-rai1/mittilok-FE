@@ -1,9 +1,8 @@
-import { Bell, Heart, Home, Menu, MessageCircle, Search, ShoppingBag, ShoppingCart, Sparkles, Sprout, User, X } from "lucide-react";
+import { Bell, Home, Menu, MessageCircle, Search, ShoppingBag, ShoppingCart, Sparkles, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext";
 import { api } from "../lib/api";
 import { useHasOpenFestival } from "../lib/festivalNav";
 import type { NotificationDto } from "../types";
@@ -39,6 +38,7 @@ function NotificationBell() {
   const [items, setItems] = useState<NotificationDto[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,7 +70,7 @@ function NotificationBell() {
 
   const loadDropdown = async () => {
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     setOpen((v) => !v);
@@ -92,7 +92,12 @@ function NotificationBell() {
 
   if (!isAuthenticated) {
     return (
-      <Link to="/login" className="icon-btn" aria-label="Notifications">
+      <Link
+        to="/login"
+        state={{ from: "/account?tab=notifications" }}
+        className="icon-btn"
+        aria-label="Notifications"
+      >
         <Bell size={19} />
       </Link>
     );
@@ -128,11 +133,87 @@ function NotificationBell() {
   );
 }
 
+function AccountMenu() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+
+  const clearClose = () => {
+    if (closeTimer.current != null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const openMenu = () => {
+    clearClose();
+    setOpen(true);
+  };
+
+  const scheduleClose = () => {
+    clearClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 160);
+  };
+
+  useEffect(() => () => clearClose(), []);
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        to="/login"
+        state={{ from: location.pathname + location.search }}
+        className="icon-btn"
+        aria-label="Account"
+      >
+        <User size={19} />
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={`account-menu${open ? " open" : ""}`}
+      onMouseEnter={openMenu}
+      onMouseLeave={scheduleClose}
+    >
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label="Account menu"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <User size={19} />
+      </button>
+      {open && (
+        <div className="account-dropdown" role="menu">
+          {user?.name && <p className="account-dropdown-name">{user.name}</p>}
+          <Link role="menuitem" to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+          <Link role="menuitem" to="/wishlist" onClick={() => setOpen(false)}>Wishlist</Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              logout();
+              setOpen(false);
+              navigate("/");
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { count } = useCart();
-  const { ids } = useWishlist();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const navLinks = useNavLinks();
@@ -172,17 +253,11 @@ export function Header() {
         <div className="header-search-desktop">{searchForm}</div>
         <div className="nav-actions">
           <NotificationBell />
-          <Link to="/wishlist" className="icon-btn badge-btn" aria-label="Wishlist">
-            <Heart size={19} />
-            <span>{ids.length}</span>
-          </Link>
           <Link to="/cart" className="icon-btn badge-btn" aria-label="Cart">
             <ShoppingCart size={19} />
             <span>{count}</span>
           </Link>
-          <Link to="/account" className="icon-btn desktop-only" aria-label="Account">
-            <User size={19} />
-          </Link>
+          <AccountMenu />
           <button className="icon-btn mobile-only" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu size={21} />
           </button>
@@ -204,11 +279,10 @@ export function Header() {
             <Link to="/ai-plant-finder" onClick={() => setOpen(false)}>
               AI Plant Finder
             </Link>
-            <Link to="/my-plants" onClick={() => setOpen(false)}>
-              My Plants
-            </Link>
             {isAuthenticated ? (
               <>
+                <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+                <Link to="/wishlist" onClick={() => setOpen(false)}>Wishlist</Link>
                 <Link to="/account" onClick={() => setOpen(false)}>
                   {user?.name ?? "Account"}
                 </Link>
@@ -217,6 +291,7 @@ export function Header() {
                   onClick={() => {
                     logout();
                     setOpen(false);
+                    navigate("/");
                   }}
                 >
                   Logout
@@ -259,7 +334,7 @@ export function Footer() {
         <Link to="/contact">Contact</Link>
         <Link to="/orders">Order Tracking</Link>
         <Link to="/ai-plant-finder">AI Plant Finder</Link>
-        <Link to="/my-plants">My Plants</Link>
+        <Link to="/account">My Account</Link>
       </div>
       <div>
         <h3>Policies</h3>
@@ -274,18 +349,19 @@ export function Footer() {
 
 export function MobileBottomNav() {
   const { pathname } = useLocation();
+  const { isAuthenticated } = useAuth();
   const items = [
     { to: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
     { to: "/nursery", label: "Shop", icon: ShoppingBag, match: (p: string) => p.startsWith("/nursery") || p.startsWith("/organics") || p.startsWith("/shop") },
     { to: "/ai-plant-finder", label: "Find", icon: Sparkles, match: (p: string) => p.startsWith("/ai-plant-finder") },
-    { to: "/my-plants", label: "Plants", icon: Sprout, match: (p: string) => p.startsWith("/my-plants") },
+    { to: isAuthenticated ? "/account" : "/login", label: "Account", icon: User, match: (p: string) => p.startsWith("/account") },
     { to: "/cart", label: "Cart", icon: ShoppingCart, match: (p: string) => p.startsWith("/cart") },
   ] as const;
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
       {items.map(({ to, label, icon: Icon, match }) => (
-        <Link key={to} to={to} className={match(pathname) ? "active" : undefined}>
+        <Link key={label} to={to} className={match(pathname) ? "active" : undefined}>
           <Icon size={20} />
           <span>{label}</span>
         </Link>

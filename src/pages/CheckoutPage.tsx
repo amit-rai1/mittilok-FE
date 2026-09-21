@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Metric, PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -26,6 +26,7 @@ export default function CheckoutPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { refresh: refreshCart, clearLocal } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const buyNow = params.get("buyNow") === "1";
 
@@ -43,8 +44,10 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) navigate("/login");
-  }, [authLoading, isAuthenticated, navigate]);
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: location.pathname + location.search } });
+    }
+  }, [authLoading, isAuthenticated, navigate, location.pathname, location.search]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { EmptyState, PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
@@ -10,6 +10,7 @@ export default function NotificationsPage() {
   usePageTitle("Notifications");
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -22,11 +23,11 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     void load().catch(() => setItems([]));
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, navigate, location.pathname, location.search]);
 
   const markRead = async (id: number) => {
     await api(`/notifications/${id}/read`, { method: "PATCH" });

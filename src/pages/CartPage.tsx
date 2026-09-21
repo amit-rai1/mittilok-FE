@@ -47,8 +47,11 @@ export default function CartPage() {
             className="btn primary full"
             disabled={!items.length}
             onClick={() => {
-              if (!isAuthenticated) navigate("/login");
-              else navigate("/checkout");
+              if (!isAuthenticated) {
+                navigate("/login", { state: { from: "/checkout" } });
+              } else {
+                navigate("/checkout");
+              }
             }}
           >
             Proceed to Checkout

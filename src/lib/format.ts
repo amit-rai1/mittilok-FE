@@ -17,6 +17,27 @@ export const ORDER_STATUS_LABELS: Record<number, string> = {
   10: "Refunded",
 };
 
+export const FESTIVAL_BOOKING_STATUS_LABELS: Record<string, string> = {
+  PendingAdvance: "Pending advance",
+  Confirmed: "Confirmed",
+  Processing: "Processing",
+  Ready: "Ready",
+  Delivered: "Delivered",
+  Cancelled: "Cancelled",
+  Refunded: "Refunded",
+  0: "Pending advance",
+  1: "Confirmed",
+  2: "Processing",
+  3: "Ready",
+  4: "Delivered",
+  5: "Cancelled",
+  6: "Refunded",
+};
+
+export function festivalBookingStatusLabel(status: string | number): string {
+  return FESTIVAL_BOOKING_STATUS_LABELS[String(status)] ?? String(status);
+}
+
 export function usePageTitle(title: string) {
   useEffect(() => {
     document.title = title ? `${title} | MittiLok Nursery` : "MittiLok Nursery";

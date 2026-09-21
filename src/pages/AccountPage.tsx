@@ -1,49 +1,47 @@
-import { ChevronRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PageShell } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../lib/format";
+import { useEffect } from "react";
 
 export default function AccountPage() {
   const { user, isAuthenticated, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   usePageTitle("Account");
 
-  if (loading) {
-    return <PageShell narrow eyebrow="Account" title="Loading..." text="Checking your session."><div className="skeleton" /></PageShell>;
-  }
+  useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: location.pathname + location.search } });
+    }
+  }, [loading, isAuthenticated, navigate, location.pathname, location.search]);
 
-  if (!isAuthenticated || !user) {
+  if (loading || !isAuthenticated || !user) {
     return (
-      <PageShell narrow eyebrow="Account" title="Sign in to continue" text="Access orders, wishlist, addresses, and notifications.">
-        <div className="button-row">
-          <Link className="btn primary" to="/login">Login</Link>
-          <Link className="btn secondary" to="/signup">Create account</Link>
-        </div>
+      <PageShell narrow eyebrow="Account" title="Loading..." text="Checking your session.">
+        <div className="skeleton" />
       </PageShell>
     );
   }
 
-  const links: [string, string][] = [
-    ["Orders", "/orders"],
-    ["Wishlist", "/wishlist"],
-    ["Notifications", "/notifications"],
-    ["My Plants", "/my-plants"],
-    ["Care Reminders", "/care"],
-  ];
-
   return (
     <PageShell narrow eyebrow="Customer Account" title={`Welcome back, ${user.name}`} text={user.email}>
-      <div className="dashboard-grid">
-        {links.map(([label, to]) => (
-          <Link to={to} key={label}>{label}<ChevronRight size={16} /></Link>
-        ))}
+      <div className="account-profile">
+        <div className="button-row">
+          <Link className="btn primary" to="/orders">My orders</Link>
+          <Link className="btn secondary" to="/wishlist">Wishlist</Link>
+          <Link className="btn secondary" to="/notifications">Notifications</Link>
+        </div>
         <button
           type="button"
-          onClick={() => { logout(); navigate("/"); }}
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
+          className="btn ghost"
+          onClick={() => {
+            logout();
+            navigate("/");
+          }}
         >
-          Logout <ChevronRight size={16} />
+          Logout
         </button>
       </div>
     </PageShell>
