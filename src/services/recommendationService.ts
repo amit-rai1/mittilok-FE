@@ -33,7 +33,7 @@ export const recommendationService = {
     const filters: Record<string, (item: PlantRecommendation) => boolean> = {
       "Show flowering plants": (item) => /flower|rose|hibiscus|bougainvillea/i.test(`${item.product.name} ${item.product.categoryName ?? ""}`),
       "Show low-maintenance plants": (item) => item.product.isBestSeller || item.score >= 70,
-      "Show cheaper options": (item) => item.product.sellingPrice <= 500,
+      "Show cheaper options": (item) => item.product.price <= 500,
       "Show pet-friendly options": (item) => item.product.isOrganic || /pet|safe|non.?toxic/i.test(item.product.name),
     };
     const filtered = filters[action] ? recommendations.filter(filters[action]) : recommendations;

@@ -150,7 +150,7 @@ export default function CheckoutPage() {
         {error && <p>{error}</p>}
         <div className="button-row">
           <Link className="btn primary" to={`/orders/${success.id}`}>Track order</Link>
-          <Link className="btn secondary" to="/shop">Continue shopping</Link>
+          <Link className="btn secondary" to="/nursery">Continue shopping</Link>
         </div>
       </PageShell>
     );
@@ -160,15 +160,20 @@ export default function CheckoutPage() {
     <PageShell eyebrow="Checkout" title="Secure checkout" text="Choose address, review totals, and place your order.">
       {error && <p style={{ color: "#b00020" }}>{error}</p>}
       <div className="checkout-steps">
-        <section>
-          <span>Step 1</span>
-          <h2>Address</h2>
-          {addresses.map((addr) => (
-            <label key={addr.id} style={{ display: "block", marginBottom: 8 }}>
-              <input type="radio" name="address" checked={addressId === addr.id} onChange={() => setAddressId(addr.id)} />{" "}
-              <strong>{addr.fullName}</strong> — {addr.houseFlat}, {addr.city}, {addr.state} {addr.pincode}
-            </label>
-          ))}
+        <section className="checkout-step">
+          <span className="checkout-step-num">1</span>
+          <h2>Delivery address</h2>
+          <div className="checkout-address-list">
+            {addresses.map((addr) => (
+              <label key={addr.id} className={`checkout-address${addressId === addr.id ? " selected" : ""}`}>
+                <input type="radio" name="address" checked={addressId === addr.id} onChange={() => setAddressId(addr.id)} />
+                <span>
+                  <strong>{addr.fullName}</strong>
+                  <em>{addr.houseFlat}, {addr.city}, {addr.state} {addr.pincode}</em>
+                </span>
+              </label>
+            ))}
+          </div>
           <button type="button" className="btn secondary" onClick={() => setShowNew((v) => !v)}>
             {showNew ? "Hide form" : "Add new address"}
           </button>
@@ -186,33 +191,41 @@ export default function CheckoutPage() {
           )}
         </section>
 
-        <section>
-          <span>Step 2</span>
+        <section className="checkout-step">
+          <span className="checkout-step-num">2</span>
           <h2>Order preview</h2>
-          <label>Coupon
+          <label className="checkout-field">
+            Coupon
             <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="MITTI10" />
           </label>
           {preview ? (
-            <>
-              {preview.items.map((line) => (
-                <p key={`${line.productId}-${line.variantId}`}>{line.productName} × {line.quantity} — {money(line.lineTotal)}</p>
-              ))}
-              <Metric label="Subtotal" value={money(preview.subtotal)} />
-              <Metric label="Discount" value={money(preview.discount + preview.couponDiscount)} />
-              <Metric label="Shipping" value={money(preview.shipping)} />
-              <Metric label="Tax" value={money(preview.tax)} />
-              <Metric label="Grand total" value={money(preview.grandTotal)} />
-              {preview.couponMessage && <p>{preview.couponMessage}</p>}
-            </>
+            <div className="checkout-preview">
+              <ul className="checkout-lines">
+                {preview.items.map((line) => (
+                  <li key={`${line.productId}-${line.variantId}`}>
+                    <span>{line.productName} × {line.quantity}</span>
+                    <strong>{money(line.lineTotal)}</strong>
+                  </li>
+                ))}
+              </ul>
+              <div className="checkout-totals">
+                <Metric label="Subtotal" value={money(preview.subtotal)} />
+                <Metric label="Discount" value={money(preview.discount + preview.couponDiscount)} />
+                <Metric label="Shipping" value={money(preview.shipping)} />
+                <Metric label="Tax" value={money(preview.tax)} />
+                <Metric label="Grand total" value={money(preview.grandTotal)} />
+              </div>
+              {preview.couponMessage && <p className="checkout-coupon-msg">{preview.couponMessage}</p>}
+            </div>
           ) : (
-            <p>Select an address to preview totals.</p>
+            <p className="checkout-hint">Select an address to preview totals.</p>
           )}
         </section>
 
-        <section>
-          <span>Step 3</span>
+        <section className="checkout-step">
+          <span className="checkout-step-num">3</span>
           <h2>Payment</h2>
-          <div className="payment-options">
+          <div className="payment-options payment-options-grid">
             {[
               [PM.Cod, "Cash on Delivery"],
               [PM.Razorpay, "Razorpay"],
@@ -224,7 +237,10 @@ export default function CheckoutPage() {
               </button>
             ))}
           </div>
-          <textarea placeholder="Order notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <label className="checkout-field">
+            Order notes
+            <textarea placeholder="Optional delivery notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </label>
           <button className="btn primary full" disabled={submitting || !addressId} onClick={() => void placeOrder()}>
             {submitting ? "Placing order..." : "Place order"}
           </button>

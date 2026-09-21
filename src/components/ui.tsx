@@ -50,7 +50,7 @@ export function SectionHeader({ eyebrow, title, cta }: { eyebrow: string; title:
 
 export function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="metric-row">
       <span>{label}</span>
       <strong>{value}</strong>
     </div>

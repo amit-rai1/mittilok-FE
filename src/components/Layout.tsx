@@ -213,10 +213,20 @@ function AccountMenu() {
 export function Header() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [annIndex, setAnnIndex] = useState(0);
   const { count } = useCart();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const navLinks = useNavLinks();
+  const desktopLinks = useNavLinks().filter(([label]) =>
+    ["Nursery", "Organics", "Festival", "Mali", "Landscaping", "Podcast", "About"].includes(label),
+  );
+
+  useEffect(() => {
+    const t = window.setInterval(() => setAnnIndex((i) => (i + 1) % ANNOUNCEMENTS.length), 4500);
+    return () => window.clearInterval(t);
+  }, []);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,20 +241,19 @@ export function Header() {
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search for plants, pots, organics..."
+        placeholder="Search plants, pots, organics..."
         aria-label="Search plants"
       />
     </form>
   );
 
+  const isActive = (to: string) =>
+    location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+
   return (
     <header className="site-header">
       <div className="announcement" aria-label="Promotions">
-        <div className="announcement-track">
-          {[...ANNOUNCEMENTS, ...ANNOUNCEMENTS].map((text, i) => (
-            <span key={`${text}-${i}`}>{text}</span>
-          ))}
-        </div>
+        <p className="announcement-static" key={annIndex}>{ANNOUNCEMENTS[annIndex]}</p>
       </div>
       <div className="nav-shell">
         <Link to="/" className="brand brand-logo-only" aria-label="MittiLok Nursery home">
@@ -264,6 +273,15 @@ export function Header() {
         </div>
       </div>
       <div className="header-search-mobile">{searchForm}</div>
+      <nav className="desktop-link-row" aria-label="Primary">
+        {desktopLinks.map(([label, to]) => (
+          <Link key={to} to={to} className={isActive(to) ? "active" : undefined}>
+            {label}
+          </Link>
+        ))}
+        <Link to="/blog" className={isActive("/blog") ? "active" : undefined}>Blog</Link>
+        <Link to="/ai-plant-finder" className={isActive("/ai-plant-finder") ? "active" : undefined}>Find plant</Link>
+      </nav>
       {open && (
         <>
           <div className="drawer-backdrop" onClick={() => setOpen(false)} />
@@ -279,6 +297,7 @@ export function Header() {
             <Link to="/ai-plant-finder" onClick={() => setOpen(false)}>
               AI Plant Finder
             </Link>
+            <Link to="/blog" onClick={() => setOpen(false)}>Blog</Link>
             {isAuthenticated ? (
               <>
                 <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>
@@ -310,38 +329,39 @@ export function Header() {
 }
 
 export function Footer() {
-  const navLinks = useNavLinks();
+  const showFestival = useHasOpenFestival();
   return (
     <footer className="footer">
       <div>
         <h2>MittiLok Nursery</h2>
-        <p>Bring Nature Home.</p>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input placeholder="Enter your email" />
+        <p>Bring Nature Home — healthy plants, organics, and garden care across India.</p>
+        <form onSubmit={(e) => e.preventDefault()} className="footer-subscribe">
+          <input placeholder="Email for garden tips" aria-label="Email" />
           <button type="submit">Subscribe</button>
         </form>
       </div>
       <div>
-        <h3>Quick Links</h3>
-        {navLinks.map(([label, to]) => (
-          <Link key={to} to={to}>
-            {label}
-          </Link>
-        ))}
-      </div>
-      <div>
-        <h3>Customer Support</h3>
-        <Link to="/contact">Contact</Link>
-        <Link to="/orders">Order Tracking</Link>
+        <h3>Shop</h3>
+        <Link to="/nursery">Nursery</Link>
+        <Link to="/organics">Organics</Link>
+        {showFestival && <Link to="/festival">Festival pre-booking</Link>}
         <Link to="/ai-plant-finder">AI Plant Finder</Link>
-        <Link to="/account">My Account</Link>
       </div>
       <div>
-        <h3>Policies</h3>
-        <Link to="/privacy-policy">Privacy Policy</Link>
-        <Link to="/terms">Terms & Conditions</Link>
-        <Link to="/refund-policy">Refund Policy</Link>
-        <Link to="/refund-policy">Shipping Policy</Link>
+        <h3>Services</h3>
+        <Link to="/services/mali">MittiLok Mali</Link>
+        <Link to="/landscaping">Landscaping</Link>
+        <Link to="/podcast">Podcast studio</Link>
+        <Link to="/blog">Care tips</Link>
+      </div>
+      <div>
+        <h3>Help</h3>
+        <Link to="/contact">Contact</Link>
+        <Link to="/orders">Order tracking</Link>
+        <Link to="/account">My account</Link>
+        <Link to="/privacy-policy">Privacy</Link>
+        <Link to="/terms">Terms</Link>
+        <Link to="/refund-policy">Refunds & shipping</Link>
       </div>
     </footer>
   );

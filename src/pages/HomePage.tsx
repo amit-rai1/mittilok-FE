@@ -65,14 +65,14 @@ function TrustBand() {
   const items = [
     [Leaf, "Healthy Plants"],
     [PackageCheck, "Secure Packaging"],
-    [Truck, "Delivery Across India"],
-    [MessageCircle, "Gardening Support"],
+    [Truck, "Pan-India Delivery"],
+    [MessageCircle, "Garden Support"],
     [ShieldCheck, "Secure Payments"],
   ] as const;
   return (
     <section className="trust-band">
       {items.map(([Icon, label]) => (
-        <div key={label}><Icon /><span>{label}</span></div>
+        <div key={label}><Icon size={20} /><span>{label}</span></div>
       ))}
     </section>
   );
@@ -108,7 +108,7 @@ function VerticalCtaStrip() {
   ] as const;
 
   return (
-    <section className="section vertical-cta-section">
+    <section className="section page-shell vertical-cta-section">
       <SectionHeader eyebrow="Services" title="Grow beyond the shop" />
       <div className="vertical-cta-grid">
         {items.map(({ to, icon: Icon, title, text, action }) => (
@@ -130,6 +130,7 @@ export default function HomePage() {
   usePageTitle("Bring Nature Home");
   const [banners, setBanners] = useState<BannerDto[]>([]);
   const [sections, setSections] = useState<HomepageSectionDto[]>([]);
+  const [sectionProducts, setSectionProducts] = useState<Record<number, ProductListDto[]>>({});
   const [featured, setFeatured] = useState<ProductListDto[]>([]);
   const [bestSellers, setBestSellers] = useState<ProductListDto[]>([]);
   const [organic, setOrganic] = useState<ProductListDto[]>([]);
@@ -147,7 +148,8 @@ export default function HomePage() {
         ]);
         if (cancelled) return;
         setBanners(bannerRes.filter((b) => b.isActive).sort((a, b) => a.displayOrder - b.displayOrder));
-        setSections(homeRes.filter((s) => s.isEnabled).sort((a, b) => a.displayOrder - b.displayOrder));
+        const enabled = homeRes.filter((s) => s.isEnabled).sort((a, b) => a.displayOrder - b.displayOrder);
+        setSections(enabled);
 
         const nursery = catRes.find((c) => c.slug === "nursery" || c.slug === "mittilok-nursery" || /nursery/i.test(c.name));
         const organicsCat = catRes.find((c) =>
@@ -163,6 +165,43 @@ export default function HomePage() {
         setFeatured(feat.items ?? []);
         setBestSellers(best.items ?? []);
         setOrganic(org.items ?? []);
+
+        const mapped: Record<number, ProductListDto[]> = {};
+        await Promise.all(
+          enabled.map(async (section) => {
+            try {
+              let config: {
+                categoryId?: number;
+                isFeatured?: boolean;
+                isBestSeller?: boolean;
+                isNewArrival?: boolean;
+                isOrganic?: boolean;
+                pageSize?: number;
+              } = {};
+              if (section.configJson) {
+                try {
+                  config = JSON.parse(section.configJson) as typeof config;
+                } catch {
+                  /* ignore bad json */
+                }
+              }
+              const type = (section.sectionType || section.key || "").toLowerCase();
+              const res = await fetchProducts({
+                categoryId: config.categoryId ?? nursery?.id,
+                isFeatured: config.isFeatured ?? (type.includes("feature") ? true : undefined),
+                isBestSeller: config.isBestSeller ?? (type.includes("best") ? true : undefined),
+                isNewArrival: config.isNewArrival ?? (type.includes("new") ? true : undefined),
+                isOrganic: config.isOrganic ?? (type.includes("organic") ? true : undefined),
+                pageSize: config.pageSize ?? 8,
+              });
+              mapped[section.id] = res.items ?? [];
+            } catch {
+              mapped[section.id] = [];
+            }
+          }),
+        );
+        if (!cancelled) setSectionProducts(mapped);
+
         if (feat.items?.[0]) {
           try {
             const rev = await api<PagedResult<ReviewDto>>(`/reviews/product/${feat.items[0].id}?pageSize=6`, { auth: false });
@@ -212,7 +251,6 @@ export default function HomePage() {
       >
         <div className="hero-content">
           <p className="eyebrow">MittiLok Nursery</p>
-          {/* Titles are often baked into banner art — avoid stacking duplicate headlines */}
           {artLed ? (
             <h1 key={activeSlide} className="sr-only">{slide.title}</h1>
           ) : (
@@ -234,12 +272,6 @@ export default function HomePage() {
             <Link className="btn ghost-light" to="/ai-plant-finder">Find Your Perfect Plant</Link>
           </div>
         </div>
-        <Link className="finder-callout" to="/ai-plant-finder">
-          <Sparkles />
-          <strong>AI Plant Finder</strong>
-          <span>Not sure which plant is right for you?</span>
-          <b>Find Your Perfect Plant</b>
-        </Link>
         <div className="hero-controls" aria-label="Hero slides">
           <button className="icon-btn hero-arrow" onClick={() => changeSlide(-1)} aria-label="Previous slide"><ChevronLeft size={20} /></button>
           <div className="hero-dots">
@@ -251,24 +283,43 @@ export default function HomePage() {
         </div>
       </section>
 
+      <Link className="finder-band" to="/ai-plant-finder">
+        <Sparkles size={18} />
+        <div>
+          <strong>Not sure which plant fits your home?</strong>
+          <span>Tell us your light and space — we’ll suggest healthy nursery picks.</span>
+        </div>
+        <b>Find plants</b>
+      </Link>
+
       <TrustBand />
 
       <FestivalHomeTeaser />
 
-      {sections.map((section) => (
-        <section className="section" key={section.id}>
-          <SectionHeader eyebrow={section.sectionType || "Collection"} title={section.title} cta="/nursery" />
-        </section>
-      ))}
+      {sections.map((section) => {
+        const items = sectionProducts[section.id] ?? [];
+        if (items.length) {
+          return (
+            <ProductRail
+              key={section.id}
+              title={section.title}
+              items={items}
+              eyebrow={section.sectionType || "Collection"}
+              cta="/nursery"
+            />
+          );
+        }
+        return null;
+      })}
 
-      <ProductRail title="Best Selling Plants" items={bestSellers.length ? bestSellers : featured} cta="/nursery" />
-      <ProductRail title="Featured Nursery Picks" items={featured} cta="/nursery" />
-      <ProductRail title="Organic Collection" items={organic} cta="/organics" />
+      <ProductRail title="Best Selling Plants" items={bestSellers.length ? bestSellers : featured} cta="/nursery" eyebrow="Most loved" />
+      <ProductRail title="Featured Nursery Picks" items={featured} cta="/nursery" eyebrow="Nursery" />
+      <ProductRail title="Organic Collection" items={organic} cta="/organics" eyebrow="Organics" />
 
       <VerticalCtaStrip />
 
       {reviews.length > 0 && (
-        <section className="section">
+        <section className="section page-shell">
           <SectionHeader eyebrow="Reviews" title="Verified plant stories" />
           <div className="review-grid">
             {reviews.map((review) => (

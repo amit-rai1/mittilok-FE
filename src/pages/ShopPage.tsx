@@ -323,7 +323,7 @@ export default function ShopPage({ rootSlug }: ShopPageProps) {
         </span>
       </div>
 
-      <div className="shop-layout shop-layout-ugaoo">
+      <div className="shop-layout shop-layout-catalog">
         <aside className="filters desktop-filters">
           <h2>Filters</h2>
           {filterFields}
