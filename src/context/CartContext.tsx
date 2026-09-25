@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { CartDto, CartItemDto, LocalCartItem } from "../types";
 import { useAuth } from "./AuthContext";
@@ -20,6 +20,7 @@ export type AddCartInput = {
 interface CartContextValue {
   items: (CartItemDto | LocalCartItem & { id?: number; lineTotal?: number; availableStock?: number; sku?: string })[];
   loading: boolean;
+  notice: string | null;
   addToCart: (input: AddCartInput) => Promise<void>;
   removeFromCart: (item: { id?: number; productId: number; variantId?: number | null }) => Promise<void>;
   updateQuantity: (item: { id?: number; productId: number; variantId?: number | null }, quantity: number) => Promise<void>;
@@ -52,6 +53,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [localItems, setLocalItems] = useState<LocalCartItem[]>(() => readLocal());
   const [serverCart, setServerCart] = useState<CartDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 2500);
+  }, []);
+
+  useEffect(() => () => {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+  }, []);
 
   const saveLocal = (next: LocalCartItem[]) => {
     setLocalItems(next);
@@ -131,34 +144,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<CartContextValue>(() => ({
     items: isAuthenticated ? (serverCart?.items ?? []) : localItems,
     loading,
+    notice,
     async addToCart(input) {
       const qty = input.quantity ?? 1;
-      if (isAuthenticated) {
-        const cart = await api<CartDto>("/cart/items", {
-          method: "POST",
-          body: {
-            productId: input.productId,
-            variantId: input.variantId ?? null,
-            quantity: qty,
-          },
-        });
-        setServerCart(cart);
-        return;
+      try {
+        if (isAuthenticated) {
+          const cart = await api<CartDto>("/cart/items", {
+            method: "POST",
+            body: {
+              productId: input.productId,
+              variantId: input.variantId ?? null,
+              quantity: qty,
+            },
+          });
+          setServerCart(cart);
+        } else {
+          const existing = localItems.find((item) => sameLine(item, input));
+          saveLocal(existing
+            ? localItems.map((item) => (item === existing ? { ...item, quantity: item.quantity + qty } : item))
+            : [...localItems, {
+              productId: input.productId,
+              variantId: input.variantId ?? null,
+              quantity: qty,
+              productName: input.productName,
+              slug: input.slug,
+              imageUrl: input.imageUrl,
+              unitPrice: input.unitPrice,
+              mrp: input.mrp,
+              variantName: input.variantName,
+            }]);
+        }
+        showNotice("Added to cart");
+      } catch (err) {
+        showNotice(err instanceof Error ? err.message : "Could not add to cart");
+        throw err;
       }
-      const existing = localItems.find((item) => sameLine(item, input));
-      saveLocal(existing
-        ? localItems.map((item) => (item === existing ? { ...item, quantity: item.quantity + qty } : item))
-        : [...localItems, {
-          productId: input.productId,
-          variantId: input.variantId ?? null,
-          quantity: qty,
-          productName: input.productName,
-          slug: input.slug,
-          imageUrl: input.imageUrl,
-          unitPrice: input.unitPrice,
-          mrp: input.mrp,
-          variantName: input.variantName,
-        }]);
     },
     async removeFromCart(item) {
       if (isAuthenticated && item.id != null) {
@@ -190,7 +210,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     count: isAuthenticated
       ? (serverCart?.itemCount ?? (serverCart?.items ?? []).reduce((sum, item) => sum + item.quantity, 0))
       : localItems.reduce((sum, item) => sum + item.quantity, 0),
-  }), [loading, isAuthenticated, localItems, serverCart, loadServer]);
+  }), [loading, notice, isAuthenticated, localItems, serverCart, loadServer, showNotice]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

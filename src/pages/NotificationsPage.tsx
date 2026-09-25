@@ -14,10 +14,14 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const load = async () => {
-    const data = await api<NotificationListResponse>("/notifications?page=1&pageSize=50");
-    setItems(data.items ?? []);
-    setUnreadCount(data.unreadCount ?? 0);
+  const load = async (quiet = false) => {
+    try {
+      const data = await api<NotificationListResponse>("/notifications?page=1&pageSize=50");
+      setItems(data.items ?? []);
+      setUnreadCount(data.unreadCount ?? 0);
+    } catch {
+      if (!quiet) setItems([]);
+    }
   };
 
   useEffect(() => {
@@ -26,17 +30,38 @@ export default function NotificationsPage() {
       navigate("/login", { state: { from: location.pathname + location.search } });
       return;
     }
-    void load().catch(() => setItems([]));
+    void load();
+    const timer = window.setInterval(() => void load(true), 60000);
+    return () => window.clearInterval(timer);
   }, [authLoading, isAuthenticated, navigate, location.pathname, location.search]);
 
   const markRead = async (id: number) => {
-    await api(`/notifications/${id}/read`, { method: "PATCH" });
-    await load();
+    const target = items.find((n) => n.id === id);
+    if (!target || target.isRead) return;
+    const prevItems = items;
+    const prevUnread = unreadCount;
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    setUnreadCount((c) => Math.max(0, c - 1));
+    try {
+      await api(`/notifications/${id}/read`, { method: "PATCH" });
+    } catch {
+      setItems(prevItems);
+      setUnreadCount(prevUnread);
+    }
   };
 
   const markAll = async () => {
-    await api("/notifications/read-all", { method: "PATCH" });
-    await load();
+    if (unreadCount === 0 && items.every((n) => n.isRead)) return;
+    const prevItems = items;
+    const prevUnread = unreadCount;
+    setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+    try {
+      await api("/notifications/read-all", { method: "PATCH" });
+    } catch {
+      setItems(prevItems);
+      setUnreadCount(prevUnread);
+    }
   };
 
   return (

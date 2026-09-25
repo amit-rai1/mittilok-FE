@@ -165,6 +165,7 @@ export interface CategoryTreeDto {
   id: number;
   name: string;
   slug: string;
+  description?: string | null;
   image?: string | null;
   icon?: string | null;
   /** CategoryType: Product=0, Service=1, Podcast=2, Mixed=3 */

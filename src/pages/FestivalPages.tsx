@@ -187,9 +187,13 @@ export function FestivalLandingPage() {
           <CountdownChips target={campaign.isBookingOpen ? campaign.bookingEnd : null} />
           {delivery && <p className="festival-delivery-line">Delivery window: {delivery}</p>}
           <div className="button-row">
-            <a className="btn primary" href="#festival-products">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => document.getElementById("festival-products")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
               Book now
-            </a>
+            </button>
             <Link className="btn secondary" to="/festival">
               All festivals
             </Link>

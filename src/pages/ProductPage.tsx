@@ -15,6 +15,8 @@ export default function ProductPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToCart } = useCart();
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toggleWishlist, has } = useWishlist();
   const { isAuthenticated } = useAuth();
   const [product, setProduct] = useState<ProductDetailDto | null>(null);
@@ -83,6 +85,12 @@ export default function ProductPage() {
     touchStartX.current = null;
     if (Math.abs(distance) < 40) return;
     goToImage(imageIndex + (distance < 0 ? 1 : -1));
+  };
+
+  const markAdded = () => {
+    setAdded(true);
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setAdded(false), 2500);
   };
 
   const cartPayload = {
@@ -184,12 +192,19 @@ export default function ProductPage() {
             </div>
           )}
           <div className="button-row pdp-actions">
-            <button className="btn primary" onClick={() => void addToCart(cartPayload)}>Add to Cart</button>
+            <button className="btn primary" type="button" onClick={() => void addToCart(cartPayload).then(markAdded).catch(() => setAdded(false))}>
+              {added ? "Added" : "Add to Cart"}
+            </button>
             <button
               className="btn secondary"
+              type="button"
               onClick={async () => {
-                await addToCart(cartPayload);
-                navigate("/checkout?buyNow=1");
+                try {
+                  await addToCart(cartPayload);
+                  navigate("/checkout?buyNow=1");
+                } catch {
+                  setAdded(false);
+                }
               }}
             >
               Buy Now
@@ -214,8 +229,8 @@ export default function ProductPage() {
               <strong>{product.name}</strong>
               <span>{money(price)}</span>
             </div>
-            <button type="button" className="btn primary" onClick={() => void addToCart(cartPayload)}>
-              Add to cart
+            <button type="button" className="btn primary" onClick={() => void addToCart(cartPayload).then(markAdded).catch(() => setAdded(false))}>
+              {added ? "Added" : "Add to cart"}
             </button>
           </div>
           <div className="care-guide">

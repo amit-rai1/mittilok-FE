@@ -1,4 +1,5 @@
 import { Heart, Star } from "lucide-react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -10,6 +11,8 @@ import { SectionHeader } from "./ui";
 export function ProductCard({ product }: { product: ProductListDto }) {
   const { addToCart } = useCart();
   const { has, toggleWishlist } = useWishlist();
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const price = product.sellingPrice || product.price;
   const image = mediaUrl(product.thumbnail);
   const outOfStock = (product.stockQuantity ?? 0) <= 0;
@@ -71,7 +74,7 @@ export function ProductCard({ product }: { product: ProductListDto }) {
           type="button"
           className="btn compact full card-cta"
           disabled={outOfStock}
-          onClick={() =>
+          onClick={() => {
             void addToCart({
               productId: product.id,
               productName: product.name,
@@ -79,10 +82,14 @@ export function ProductCard({ product }: { product: ProductListDto }) {
               imageUrl: product.thumbnail,
               unitPrice: price,
               mrp: product.mrp,
-            })
-          }
+            }).then(() => {
+              setAdded(true);
+              if (addedTimer.current) clearTimeout(addedTimer.current);
+              addedTimer.current = setTimeout(() => setAdded(false), 2500);
+            }).catch(() => setAdded(false));
+          }}
         >
-          {outOfStock ? "Sold out" : "Add to Cart"}
+          {outOfStock ? "Sold out" : added ? "Added" : "Add to Cart"}
         </button>
       </div>
     </article>

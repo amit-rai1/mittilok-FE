@@ -81,9 +81,16 @@ export function setTokens(token: string, refreshToken: string) {
   localStorage.setItem(REFRESH_KEY, refreshToken);
 }
 
+export const SESSION_EXPIRED_EVENT = "mittilok-session-expired";
+
 export function clearTokens() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
+}
+
+function expireSession() {
+  clearTokens();
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
 }
 
 type RequestOptions = Omit<RequestInit, "body"> & {
@@ -103,15 +110,11 @@ async function tryRefresh(): Promise<boolean> {
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
-    if (!res.ok) {
-      clearTokens();
-      return false;
-    }
+    if (!res.ok) return false;
     const data = (await res.json()) as { token: string; refreshToken: string };
     setTokens(data.token, data.refreshToken);
     return true;
   } catch {
-    clearTokens();
     return false;
   }
 }
@@ -144,10 +147,14 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
   });
 
-  if (res.status === 401 && auth && !skipRefresh) {
-    if (!refreshPromise) refreshPromise = tryRefresh().finally(() => { refreshPromise = null; });
-    const ok = await refreshPromise;
-    if (ok) return api<T>(path, { ...options, skipRefresh: true });
+  if (res.status === 401 && auth) {
+    if (!skipRefresh) {
+      if (!refreshPromise) refreshPromise = tryRefresh().finally(() => { refreshPromise = null; });
+      const ok = await refreshPromise;
+      if (ok) return api<T>(path, { ...options, skipRefresh: true });
+    }
+    expireSession();
+    throw new ApiError("Session expired. Please sign in again.", 401);
   }
 
   if (!res.ok) throw await parseError(res);

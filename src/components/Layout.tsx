@@ -37,8 +37,13 @@ function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<NotificationDto[]>([]);
   const ref = useRef<HTMLDivElement>(null);
+  const openRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,16 +52,26 @@ function NotificationBell() {
       return;
     }
     let cancelled = false;
-    (async () => {
+    const tick = async () => {
       try {
-        const countRes = await api<{ count: number }>("/notifications/unread-count");
-        if (!cancelled) setUnread(countRes.count ?? 0);
+        if (openRef.current) {
+          const data = await api<{ items: NotificationDto[]; unreadCount: number }>("/notifications?page=1&pageSize=5");
+          if (cancelled) return;
+          setItems(data.items ?? []);
+          setUnread(data.unreadCount ?? 0);
+        } else {
+          const countRes = await api<{ count: number }>("/notifications/unread-count");
+          if (!cancelled) setUnread(countRes.count ?? 0);
+        }
       } catch {
-        if (!cancelled) setUnread(0);
+        /* keep the last list and badge if a refresh fails */
       }
-    })();
+    };
+    void tick();
+    const timer = window.setInterval(() => void tick(), 60000);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [isAuthenticated]);
 
@@ -85,9 +100,32 @@ function NotificationBell() {
   };
 
   const markRead = async (id: number) => {
-    await api(`/notifications/${id}/read`, { method: "PATCH" });
+    const target = items.find((n) => n.id === id);
+    if (!target || target.isRead) return;
+    const prevItems = items;
+    const prevUnread = unread;
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
     setUnread((c) => Math.max(0, c - 1));
+    try {
+      await api(`/notifications/${id}/read`, { method: "PATCH" });
+    } catch {
+      setItems(prevItems);
+      setUnread(prevUnread);
+    }
+  };
+
+  const markAll = async () => {
+    if (unread === 0 && items.every((n) => n.isRead)) return;
+    const prevItems = items;
+    const prevUnread = unread;
+    setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnread(0);
+    try {
+      await api("/notifications/read-all", { method: "PATCH" });
+    } catch {
+      setItems(prevItems);
+      setUnread(prevUnread);
+    }
   };
 
   if (!isAuthenticated) {
@@ -113,9 +151,16 @@ function NotificationBell() {
         <div className="notif-dropdown">
           <div className="notif-dropdown-head">
             <strong>Notifications</strong>
-            <Link to="/notifications" onClick={() => setOpen(false)}>
-              View all
-            </Link>
+            <span className="notif-dropdown-actions">
+              {unread > 0 && (
+                <button type="button" onClick={() => void markAll()}>
+                  Mark all read
+                </button>
+              )}
+              <Link to="/notifications" onClick={() => setOpen(false)}>
+                View all
+              </Link>
+            </span>
           </div>
           {items.length === 0 ? (
             <p className="notif-empty">No notifications yet.</p>
@@ -398,6 +443,18 @@ export function FloatingWhatsApp() {
   );
 }
 
+function CartNotice() {
+  const { notice } = useCart();
+  if (!notice) return null;
+  const added = notice === "Added to cart";
+  return (
+    <div className="cart-toast" role="status">
+      <span>{notice}</span>
+      {added && <Link to="/cart">View cart</Link>}
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const hideRail = ["/login", "/signup", "/forgot-password"].some(
@@ -409,6 +466,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Header />
       {!hideRail && <CategoryIconRail />}
       <main>{children}</main>
+      <CartNotice />
       <MobileBottomNav />
       <FloatingWhatsApp />
       <Footer />

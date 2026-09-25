@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, clearTokens, getAccessToken, setTokens } from "../lib/api";
+import { api, clearTokens, getAccessToken, SESSION_EXPIRED_EVENT, setTokens } from "../lib/api";
 import type { AuthResponse, LoginRequest, RegisterRequest, UserDto } from "../types";
 
 interface AuthContextValue {
@@ -55,6 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })();
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const onExpired = () => {
+      clearTokens();
+      setUser(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
