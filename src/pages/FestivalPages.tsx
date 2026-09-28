@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { AddressPicker } from "../components/AddressPicker";
 import { api, mediaUrl } from "../lib/api";
 import { usePageTitle } from "../lib/format";
+import type { AddressDto } from "../types";
 import { getAdminWhatsAppNumber, whatsAppOrderUrl } from "../lib/whatsapp";
 
 export type FestivalVariant = { id: number; name: string; price: number; stock: number };
@@ -267,14 +269,14 @@ export function FestivalBookPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [adminWhatsApp, setAdminWhatsApp] = useState("");
+  const [addressId, setAddressId] = useState<number | null>(null);
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
-    customerEmail: "",
     addressLine1: "",
     city: "",
+    state: "",
     pincode: "",
-    preferredDeliverySlot: "",
     notes: "",
     potMessage: "",
     potDesign: "",
@@ -341,6 +343,10 @@ export function FestivalBookPage() {
     const minQty = requiredQuantity(campaign);
     if (minQty > 0 && qty < minQty) {
       setError(`Minimum quantity is ${minQty}. Add ${minQty - qty} more.`);
+      return;
+    }
+    if (!form.customerName.trim() || !form.customerPhone.trim()) {
+      setError("Choose a delivery address.");
       return;
     }
     setSubmitting(true);
@@ -518,18 +524,21 @@ export function FestivalBookPage() {
             <span className="festival-step-num">5</span> Delivery details
           </h2>
           <div className="festival-fields">
-            <input required placeholder="Full name" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
-            <input required placeholder="Phone" value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} />
-            <input placeholder="Email" value={form.customerEmail} onChange={(e) => setForm({ ...form, customerEmail: e.target.value })} />
-            <input placeholder="Address" value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} />
-            <div className="festival-fields-row">
-              <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-              <input placeholder="Pincode" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} />
-            </div>
-            <input
-              placeholder="Preferred delivery slot"
-              value={form.preferredDeliverySlot}
-              onChange={(e) => setForm({ ...form, preferredDeliverySlot: e.target.value })}
+            <AddressPicker
+              enabled={isAuthenticated}
+              selectedId={addressId}
+              onSelect={(addr: AddressDto) => {
+                setAddressId(addr.id);
+                setForm((prev) => ({
+                  ...prev,
+                  customerName: addr.fullName,
+                  customerPhone: addr.mobile,
+                  addressLine1: [addr.houseFlat, addr.street, addr.area, addr.landmark].filter(Boolean).join(", "),
+                  city: addr.city,
+                  state: addr.state,
+                  pincode: addr.pincode,
+                }));
+              }}
             />
           </div>
         </section>

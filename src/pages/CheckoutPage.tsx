@@ -1,26 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Metric, PageShell } from "../components/ui";
+import { AddressPicker } from "../components/AddressPicker";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { api } from "../lib/api";
 import { money, usePageTitle } from "../lib/format";
 import { getAdminWhatsAppNumber, whatsAppOrderUrl } from "../lib/whatsapp";
-import type { AddressDto, AddressRequest, CheckoutPreviewResponse, OrderDetailDto, PaymentMethod, PaymentOrderResult } from "../types";
+import type { CheckoutPreviewResponse, OrderDetailDto, PaymentMethod, PaymentOrderResult } from "../types";
 import { PaymentMethod as PM } from "../types";
-
-const emptyAddress: AddressRequest = {
-  fullName: "",
-  mobile: "",
-  houseFlat: "",
-  street: "",
-  city: "",
-  state: "",
-  pincode: "",
-  country: "India",
-  addressType: 0,
-  isDefault: true,
-};
 
 export default function CheckoutPage() {
   usePageTitle("Checkout");
@@ -31,10 +19,7 @@ export default function CheckoutPage() {
   const [params] = useSearchParams();
   const buyNow = params.get("buyNow") === "1";
 
-  const [addresses, setAddresses] = useState<AddressDto[]>([]);
   const [addressId, setAddressId] = useState<number | null>(null);
-  const [newAddress, setNewAddress] = useState<AddressRequest>(emptyAddress);
-  const [showNew, setShowNew] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PM.Cod);
   const [preview, setPreview] = useState<CheckoutPreviewResponse | null>(null);
@@ -56,18 +41,6 @@ export default function CheckoutPage() {
   }, [authLoading, isAuthenticated, navigate, location.pathname, location.search]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    api<AddressDto[]>("/addresses")
-      .then((list) => {
-        setAddresses(list);
-        const def = list.find((a) => a.isDefault) ?? list[0];
-        if (def) setAddressId(def.id);
-        if (!list.length) setShowNew(true);
-      })
-      .catch(() => setShowNew(true));
-  }, [isAuthenticated]);
-
-  useEffect(() => {
     if (!isAuthenticated || !addressId) return;
     api<CheckoutPreviewResponse>("/checkout/preview", {
       method: "POST",
@@ -81,20 +54,6 @@ export default function CheckoutPage() {
       .then(setPreview)
       .catch((err: Error) => setError(err.message));
   }, [isAuthenticated, addressId, couponCode, paymentMethod, buyNow]);
-
-  const saveAddress = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    try {
-      const created = await api<AddressDto>("/addresses", { method: "POST", body: newAddress });
-      setAddresses((prev) => [...prev, created]);
-      setAddressId(created.id);
-      setShowNew(false);
-      setNewAddress(emptyAddress);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save address");
-    }
-  };
 
   const placeOrder = async () => {
     if (!addressId) {
@@ -178,32 +137,7 @@ export default function CheckoutPage() {
         <section className="checkout-step">
           <span className="checkout-step-num">1</span>
           <h2>Delivery address</h2>
-          <div className="checkout-address-list">
-            {addresses.map((addr) => (
-              <label key={addr.id} className={`checkout-address${addressId === addr.id ? " selected" : ""}`}>
-                <input type="radio" name="address" checked={addressId === addr.id} onChange={() => setAddressId(addr.id)} />
-                <span>
-                  <strong>{addr.fullName}</strong>
-                  <em>{addr.houseFlat}, {addr.city}, {addr.state} {addr.pincode}</em>
-                </span>
-              </label>
-            ))}
-          </div>
-          <button type="button" className="btn secondary" onClick={() => setShowNew((v) => !v)}>
-            {showNew ? "Hide form" : "Add new address"}
-          </button>
-          {showNew && (
-            <form className="form-grid" onSubmit={(e) => void saveAddress(e)} style={{ marginTop: 12 }}>
-              <input required placeholder="Full name" value={newAddress.fullName} onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })} />
-              <input required placeholder="Mobile" value={newAddress.mobile} onChange={(e) => setNewAddress({ ...newAddress, mobile: e.target.value })} />
-              <input required placeholder="House / Flat" value={newAddress.houseFlat} onChange={(e) => setNewAddress({ ...newAddress, houseFlat: e.target.value })} />
-              <input placeholder="Street" value={newAddress.street ?? ""} onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })} />
-              <input required placeholder="City" value={newAddress.city} onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} />
-              <input required placeholder="State" value={newAddress.state} onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })} />
-              <input required placeholder="PIN code" value={newAddress.pincode} onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })} />
-              <button className="btn primary" type="submit">Save address</button>
-            </form>
-          )}
+          <AddressPicker enabled={isAuthenticated} selectedId={addressId} onSelect={(addr) => setAddressId(addr.id)} />
         </section>
 
         <section className="checkout-step">
