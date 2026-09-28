@@ -526,6 +526,8 @@ export interface FestivalBookingDto {
   pincode?: string | null;
   preferredDeliverySlot?: string | null;
   notes?: string | null;
+  potMessage?: string | null;
+  potDesign?: string | null;
   subtotal: number;
   grandTotal: number;
   advancePercent: number;

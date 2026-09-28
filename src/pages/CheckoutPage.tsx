@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { api } from "../lib/api";
 import { money, usePageTitle } from "../lib/format";
+import { getAdminWhatsAppNumber, whatsAppOrderUrl } from "../lib/whatsapp";
 import type { AddressDto, AddressRequest, CheckoutPreviewResponse, OrderDetailDto, PaymentMethod, PaymentOrderResult } from "../types";
 import { PaymentMethod as PM } from "../types";
 
@@ -41,6 +42,11 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<OrderDetailDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [adminWhatsApp, setAdminWhatsApp] = useState("");
+
+  useEffect(() => {
+    void getAdminWhatsAppNumber().then(setAdminWhatsApp);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -143,6 +149,12 @@ export default function CheckoutPage() {
   };
 
   if (success) {
+    const lines = (preview?.items ?? [])
+      .map((line) => `${line.productName}${line.variantName ? ` (${line.variantName})` : ""} × ${line.quantity}`)
+      .join("\n");
+    const whatsAppText = [`Order ${success.orderNumber}`, lines, `Total: ${money(success.grandTotal)}`]
+      .filter(Boolean)
+      .join("\n");
     return (
       <PageShell eyebrow="Order placed" title={`Thank you! ${success.orderNumber}`} text="Your nursery order is confirmed.">
         <Metric label="Total" value={money(success.grandTotal)} />
@@ -150,6 +162,9 @@ export default function CheckoutPage() {
         {error && <p>{error}</p>}
         <div className="button-row">
           <Link className="btn primary" to={`/orders/${success.id}`}>Track order</Link>
+          <a className="btn secondary" href={whatsAppOrderUrl(whatsAppText, adminWhatsApp)} target="_blank" rel="noreferrer">
+            Send order on WhatsApp
+          </a>
           <Link className="btn secondary" to="/nursery">Continue shopping</Link>
         </div>
       </PageShell>

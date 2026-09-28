@@ -70,7 +70,10 @@ export function OrdersPage() {
                   <p className="muted" style={{ margin: "4px 0 0" }}>{booking.festivalName ?? "Festival"}</p>
                 </div>
                 <span>{festivalBookingStatusLabel(booking.status)}</span>
-                <b>{money(booking.grandTotal)}</b>
+                <div>
+                  <b>{money(booking.grandTotal)}</b>
+                  <p className="muted" style={{ margin: "4px 0 0" }}>Advance due {money(booking.advanceRequired)}</p>
+                </div>
               </Link>
             ))
           )}
@@ -134,8 +137,8 @@ export function FestivalBookingDetailPage() {
       <div className="summary festival-booking-summary">
         <Metric label="Status" value={festivalBookingStatusLabel(booking.status)} />
         <Metric label="Grand total" value={money(booking.grandTotal)} />
-        <Metric label="Advance paid" value={money(booking.advancePaid)} />
-        <Metric label="Balance due" value={money(booking.balanceDue)} />
+        <Metric label="Advance due" value={money(booking.advanceRequired)} />
+        <Metric label="Left to pay" value={money(booking.balanceDue)} />
       </div>
 
       <section className="festival-booking-block">
@@ -145,6 +148,8 @@ export function FestivalBookingDetailPage() {
         {booking.customerEmail && <p>{booking.customerEmail}</p>}
         {address && <p>{address}</p>}
         {booking.preferredDeliverySlot && <p>Delivery slot: {booking.preferredDeliverySlot}</p>}
+        {booking.potMessage && <p>Text on the pot: {booking.potMessage}</p>}
+        {booking.potDesign && <p>Design: {booking.potDesign}</p>}
         {booking.notes && <p className="note">{booking.notes}</p>}
       </section>
 

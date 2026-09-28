@@ -1886,12 +1886,24 @@ th, td { padding: .85rem; text-align: left; border-bottom: 1px solid var(--line)
   gap: .65rem;
 }
 .festival-fields input,
-.festival-step select {
+.festival-step select,
+.festival-pot-request textarea {
   width: 100%;
   padding: .7rem .85rem;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--white);
+}
+.festival-pot-request {
+  display: grid;
+  gap: .65rem;
+  max-width: 640px;
+}
+.festival-pot-request label {
+  display: grid;
+  gap: .35rem;
+  font-weight: 700;
+  font-size: .92rem;
 }
 .festival-check {
   display: flex;

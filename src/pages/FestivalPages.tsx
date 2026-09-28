@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api, mediaUrl } from "../lib/api";
 import { usePageTitle } from "../lib/format";
+import { getAdminWhatsAppNumber, whatsAppOrderUrl } from "../lib/whatsapp";
 
 export type FestivalVariant = { id: number; name: string; price: number; stock: number };
 export type FestivalProduct = {
@@ -27,6 +28,8 @@ export type FestivalCampaign = {
   deliveryStart?: string | null;
   deliveryEnd?: string | null;
   advancePercent: number;
+  minOrderAmount?: number;
+  minOrderQuantity?: number;
   isBookingOpen: boolean;
   products: FestivalProduct[];
 };
@@ -42,7 +45,23 @@ export type FestivalPrice = {
   error?: string | null;
 };
 
-type BookingState = { bookingNumber?: string; advancePaid?: number; balanceDue?: number; grandTotal?: number };
+type BookingState = {
+  bookingNumber?: string;
+  advanceRequired?: number;
+  advancePaid?: number;
+  balanceDue?: number;
+  grandTotal?: number;
+  potMessage?: string | null;
+  potDesign?: string | null;
+  items?: {
+    productName?: string | null;
+    variantName?: string | null;
+    potName?: string | null;
+    addonNames?: string | null;
+    productImage?: string | null;
+    quantity?: number;
+  }[];
+};
 
 export function useCountdown(targetIso?: string | null) {
   const target = targetIso ? new Date(targetIso).getTime() : 0;
@@ -247,6 +266,7 @@ export function FestivalBookPage() {
   const [price, setPrice] = useState<FestivalPrice | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [adminWhatsApp, setAdminWhatsApp] = useState("");
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -256,12 +276,17 @@ export function FestivalBookPage() {
     pincode: "",
     preferredDeliverySlot: "",
     notes: "",
-    markAdvancePaid: true,
+    potMessage: "",
+    potDesign: "",
   });
 
   const product = campaign?.products.find((p) => p.productSlug === productSlug);
   usePageTitle(product?.productName ?? "Book festival plant");
   const delivery = formatWindow(campaign?.deliveryStart, campaign?.deliveryEnd);
+
+  useEffect(() => {
+    void getAdminWhatsAppNumber().then(setAdminWhatsApp);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -313,6 +338,11 @@ export function FestivalBookPage() {
       setError("Booking window is closed.");
       return;
     }
+    const minQty = requiredQuantity(campaign);
+    if (minQty > 0 && qty < minQty) {
+      setError(`Minimum quantity is ${minQty}. Add ${minQty - qty} more.`);
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -326,9 +356,26 @@ export function FestivalBookPage() {
           addonIds,
           quantity: qty,
           ...form,
+          markAdvancePaid: false,
         },
       });
-      navigate(`/festival/${slug}/confirmation`, { state: booking });
+      const next: BookingState = {
+        ...booking,
+        potMessage: booking.potMessage || form.potMessage,
+        potDesign: booking.potDesign || form.potDesign,
+        items: booking.items?.length
+          ? booking.items
+          : [{
+              productName: product.productName,
+              variantName: product.variants.find((v) => v.id === variantId)?.name,
+              potName: pots.find((p) => p.id === potId)?.name,
+              addonNames: addons.filter((a) => addonIds.includes(a.id)).map((a) => a.name).join(", ") || null,
+              productImage: product.thumbnail,
+              quantity: qty,
+            }],
+      };
+      window.open(whatsAppOrderUrl(festivalWhatsAppText(next), adminWhatsApp), "_blank", "noopener,noreferrer");
+      navigate(`/festival/${slug}/confirmation`, { state: next });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Booking failed");
     } finally {
@@ -346,6 +393,9 @@ export function FestivalBookPage() {
 
   const selectedPot = typeof potId === "number" ? pots.find((p) => p.id === potId) : undefined;
   const potOos = !!selectedPot && selectedPot.stock < qty;
+  const minQty = requiredQuantity(campaign);
+  const belowQty = minQty > 0 && qty < minQty;
+  const qtyShort = Math.max(0, minQty - qty);
 
   return (
     <section className="page-shell festival-book">
@@ -394,6 +444,26 @@ export function FestivalBookPage() {
             ))}
           </div>
           {potOos && <p className="auth-error">Selected pot is out of stock. Please choose another pot.</p>}
+          <div className="festival-pot-request">
+            <label>
+              Text on the pot
+              <textarea
+                rows={2}
+                placeholder="Name or message to write on the pot"
+                value={form.potMessage}
+                onChange={(e) => setForm({ ...form, potMessage: e.target.value })}
+              />
+            </label>
+            <label>
+              Design
+              <textarea
+                rows={2}
+                placeholder="Design you want on the pot"
+                value={form.potDesign}
+                onChange={(e) => setForm({ ...form, potDesign: e.target.value })}
+              />
+            </label>
+          </div>
         </section>
 
         <section className="festival-step">
@@ -461,10 +531,6 @@ export function FestivalBookPage() {
               value={form.preferredDeliverySlot}
               onChange={(e) => setForm({ ...form, preferredDeliverySlot: e.target.value })}
             />
-            <label className="festival-check">
-              <input type="checkbox" checked={form.markAdvancePaid} onChange={(e) => setForm({ ...form, markAdvancePaid: e.target.checked })} />
-              Mark advance as paid now (MVP confirm)
-            </label>
           </div>
         </section>
 
@@ -483,8 +549,9 @@ export function FestivalBookPage() {
             ) : (
               <small>Calculating…</small>
             )}
+            {belowQty ? <small>Minimum quantity is {minQty}. Add {qtyShort} more.</small> : null}
           </div>
-          <button className="btn primary" disabled={submitting || !campaign.isBookingOpen || !!price?.error || potOos}>
+          <button className="btn primary" disabled={submitting || !campaign.isBookingOpen || !!price?.error || potOos || belowQty}>
             {submitting ? "Booking…" : `Confirm · Pay ${price ? money(price.advanceRequired) : "advance"}`}
           </button>
         </div>
@@ -493,9 +560,43 @@ export function FestivalBookPage() {
   );
 }
 
+function requiredQuantity(campaign: { minOrderQuantity?: number; minOrderAmount?: number }) {
+  const quantity = campaign.minOrderQuantity ?? 0;
+  if (quantity > 0) return quantity;
+  return Math.max(0, Math.floor(campaign.minOrderAmount ?? 0));
+}
+
+function festivalWhatsAppText(state: BookingState) {
+  const lines = (state.items ?? []).flatMap((item) => {
+    const bits = [
+      `Order: ${item.productName || "Plant"}`,
+      item.variantName ? `Size: ${item.variantName}` : "",
+      item.potName ? `Pot: ${item.potName}` : "",
+      item.addonNames ? `Add-ons: ${item.addonNames}` : "",
+      `Quantity: ${item.quantity ?? 1}`,
+    ];
+    return bits.filter(Boolean);
+  });
+  return [
+    `Festival booking ${state.bookingNumber}`,
+    ...lines,
+    state.potMessage?.trim() ? `Text on the pot: ${state.potMessage.trim()}` : "",
+    state.potDesign?.trim() ? `Design: ${state.potDesign.trim()}` : "",
+    `Total: ${money(state.grandTotal ?? 0)}`,
+    `Advance to pay: ${money(state.advanceRequired ?? 0)}`,
+    `Balance left: ${money(state.balanceDue ?? 0)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function FestivalConfirmationPage() {
   usePageTitle("Booking confirmed");
   const { state } = useLocation() as { state?: BookingState };
+  const [adminWhatsApp, setAdminWhatsApp] = useState("");
+  useEffect(() => {
+    void getAdminWhatsAppNumber().then(setAdminWhatsApp);
+  }, []);
   return (
     <section className="page-shell festival-confirm">
       <div className="festival-confirm-card">
@@ -512,8 +613,8 @@ export function FestivalConfirmationPage() {
               <dd>{money(state.grandTotal ?? 0)}</dd>
             </div>
             <div>
-              <dt>Advance paid</dt>
-              <dd>{money(state.advancePaid ?? 0)}</dd>
+              <dt>Advance due</dt>
+              <dd>{money(state.advanceRequired ?? 0)}</dd>
             </div>
             <div>
               <dt>Balance due</dt>
@@ -527,6 +628,11 @@ export function FestivalConfirmationPage() {
           <Link className="btn primary" to="/orders#festival-bookings">
             View my bookings
           </Link>
+          {state?.bookingNumber ? (
+            <a className="btn secondary" href={whatsAppOrderUrl(festivalWhatsAppText(state), adminWhatsApp)} target="_blank" rel="noreferrer">
+              Send order on WhatsApp
+            </a>
+          ) : null}
           <Link className="btn secondary" to="/festival">
             Back to festivals
           </Link>
