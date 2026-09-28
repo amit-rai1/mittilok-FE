@@ -1672,10 +1672,12 @@ th, td { padding: .85rem; text-align: left; border-bottom: 1px solid var(--line)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
+  align-items: stretch;
 }
 .festival-product-card {
   display: flex;
   flex-direction: column;
+  height: 100%;
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1693,9 +1695,11 @@ th, td { padding: .85rem; text-align: left; border-bottom: 1px solid var(--line)
   display: block;
 }
 .festival-product-body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: .45rem;
   padding: .85rem;
+  flex: 1;
 }
 .festival-product-body h3 {
   margin: 0;
@@ -1708,7 +1712,14 @@ th, td { padding: .85rem; text-align: left; border-bottom: 1px solid var(--line)
   text-decoration: line-through;
   font-size: .85rem;
 }
-.festival-product-body .btn { justify-self: start; }
+.festival-product-body .btn {
+  margin-top: auto;
+  width: 100%;
+  min-height: 44px;
+  white-space: nowrap;
+  justify-content: center;
+  text-align: center;
+}
 
 .festival-book-hero-img {
   width: 100%;
